@@ -1,0 +1,76 @@
+import React from 'react'
+import './style.css'
+import { Link } from 'react-router-dom'
+import Rating from '@mui/material/Rating';
+import Button from '@mui/material/Button';
+import { FaRegHeart } from "react-icons/fa";
+import { IoGitCompareOutline } from "react-icons/io5";
+import { MdZoomOutMap } from "react-icons/md";
+import Tooltip from '@mui/material/Tooltip';
+import { useContext } from 'react';
+import { MyContext } from '../../App';
+
+
+const ProductItem = () => {
+
+    const context = useContext(MyContext);
+    
+  return (
+    <div className='overflow-hidden shadow-lg border-[rgba(0,0,0,0.1)] rounded-md productItem border'>
+        <div className='group imgWrapper w-[100%] rounded-md relative'>
+            <Link to='/product/4874'>
+                <div className='img h-[220px] overflow-hidden'>
+                    <img src="https://serviceapi.spicezgold.com/download/1742463096955_hbhb1.jpg"
+                    alt=""
+                    className='w-full'/>
+
+                    <img src="https://serviceapi.spicezgold.com/download/1742463096956_hbhb2.jpg"
+                    alt=""
+                    className='absolute top-0 left-0 object-cover w-full h-full transition-all duration-700 opacity-0 group-hover:opacity-100 group-hover:scale-105'/>
+                </div>
+             </Link>
+             <span className='absolute flex items-center discount top-[10px] left-[10px] z-50 bg-primary text-white rounded-lg px-2 py-1 font-[500] text-[12px]'
+             >
+                10%
+             </span>
+
+             <div className='absolute actions top-[-200px] right-[5px] z-50 flex items-center gap-2 flex-col w-[50px] transition-all duration-300 group-hover:top-[15px] opacity-0 group-hover:opacity-100'>
+                <Tooltip title="View product details" placement="left-start">
+                    <Button className='!w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-white text-black hover:!bg-primary hover:text-white'
+                     onClick={()=>context.setOpenProductDetailsModal(true)}>
+                        <MdZoomOutMap className='text-[18px] !text-black group-hover:text-white hover:!text-white'/>
+                    </Button>
+                </Tooltip>
+                <Tooltip title="Compare product" placement="left-start">
+                    <Button className='!w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-white text-black hover:!bg-primary hover:text-white'
+                    >
+                        <IoGitCompareOutline className='text-[18px] !text-black group-hover:text-white hover:!text-white'/>
+                    </Button>
+                </Tooltip>
+                <Tooltip title="Add to wishlist" placement="left-start">
+                    <Button className='!w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-white text-black hover:!bg-primary hover:text-white'
+                    >
+                        <FaRegHeart className='text-[18px] !text-black group-hover:text-white hover:!text-white'/>
+                    </Button>
+                </Tooltip>
+             </div>
+        </div>
+
+        <div className='p-3 py-5 info'>
+            <h6 className='text-[13px] !font-[400]'>
+                <Link to='/product/4874' className='transition-all link'>Soylent Green</Link>
+            </h6>
+            <h3 className='text-[13px] title mt-1 mb-1 font-[500] text-[#000]'>
+                <Link to='/product/4874' className='transition-all link'>Sirii Georgette Pink Color Saree with Blouse piece</Link>
+            </h3>
+            <Rating name="size-small" defaultValue={4} size="small" readOnly/>
+            <div className='flex items-center gap-4'>
+                <span className='text-gray-500 font-[500] line-through oldPrice text-[15px]'>580</span>
+                <span className='font-[600] newPrice text-primary text-[15px]'>580</span>
+            </div>
+        </div>
+    </div>
+  )
+}
+
+export default ProductItem
