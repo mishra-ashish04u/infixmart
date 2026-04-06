@@ -1,25 +1,22 @@
-import mongoose from "mongoose";
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/connectDB.js";
 
-const categorySchema = new mongoose.Schema(
+const Category = sequelize.define(
+  "Category",
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    _id: { type: DataTypes.VIRTUAL, get() { return this.id; } },
+    name: { type: DataTypes.STRING, allowNull: false },
     images: {
-      type: [String],
+      type: DataTypes.TEXT,
+      defaultValue: "[]",
+      get() { return JSON.parse(this.getDataValue("images") || "[]"); },
+      set(val) { this.setDataValue("images", JSON.stringify(val)); },
     },
-    parentCatName: {
-      type: String,
-    },
-    parentCatId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-      default: null,
-    },
+    parentCatName: { type: DataTypes.STRING, defaultValue: null },
+    parentCatId: { type: DataTypes.INTEGER, defaultValue: null },
   },
   { timestamps: true }
 );
 
-export const Category = mongoose.model("Category", categorySchema);
+export { Category };

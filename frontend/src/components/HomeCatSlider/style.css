@@ -1,0 +1,17 @@
+/* Category swiper navigation arrows */
+.catSwiper .swiper-button-next,
+.catSwiper .swiper-button-prev {
+  width: 30px;
+  height: 30px;
+  background: #1565C0;
+  border-radius: 50%;
+  color: #fff !important;
+}
+.catSwiper .swiper-button-next::after,
+.catSwiper .swiper-button-prev::after {
+  font-size: 11px !important;
+  font-weight: 900;
+}
+.catSwiper .swiper-button-disabled {
+  opacity: 0.3 !important;
+}

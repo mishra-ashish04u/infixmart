@@ -1,46 +1,43 @@
-import mongoose from "mongoose";
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/connectDB.js";
 
-const OrderSchema = new mongoose.Schema(
+const Order = sequelize.define(
+  "Order",
   {
-    userId: {
-      type: mongoose.Schema.ObjectId,
-      ref: "user",
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    _id: { type: DataTypes.VIRTUAL, get() { return this.id; } },
+    userId: { type: DataTypes.INTEGER, allowNull: false },
+    items: {
+      type: DataTypes.TEXT,
+      defaultValue: "[]",
+      get() { return JSON.parse(this.getDataValue("items") || "[]"); },
+      set(val) { this.setDataValue("items", JSON.stringify(val)); },
     },
-    orderId: {
-      type: String,
-      required: [true, "Please provide orderId"],
-      unique: true,
+    shippingAddress: {
+      type: DataTypes.TEXT,
+      defaultValue: "{}",
+      get() { return JSON.parse(this.getDataValue("shippingAddress") || "{}"); },
+      set(val) { this.setDataValue("shippingAddress", JSON.stringify(val)); },
     },
-    productId: {
-      type: mongoose.Schema.ObjectId,
-      ref: "product",
+    paymentMethod: { type: DataTypes.STRING, defaultValue: "" },
+    paymentResult: {
+      type: DataTypes.TEXT,
+      defaultValue: "{}",
+      get() { return JSON.parse(this.getDataValue("paymentResult") || "{}"); },
+      set(val) { this.setDataValue("paymentResult", JSON.stringify(val)); },
     },
-    product_details: {
-      name: String,
-      image: Array,
-    },
-    paymentId: {
-      type: String,
-      default: "",
-    },
-    payment_status: {
-      type: String,
-      default: "",
-    },
-    delivery_address: {
-      type: mongoose.Schema.ObjectId,
-      ref: "address",
-    },
-    subTotalAmt: {
-      type: Number,
-      default: 0,
-    },
-    totalAmt: {
-      type: Number,
-      default: 0,
+    itemsPrice: { type: DataTypes.FLOAT, defaultValue: 0 },
+    shippingPrice: { type: DataTypes.FLOAT, defaultValue: 0 },
+    gstAmount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+    totalPrice: { type: DataTypes.FLOAT, defaultValue: 0 },
+    isPaid: { type: DataTypes.BOOLEAN, defaultValue: false },
+    paidAt: { type: DataTypes.DATE, defaultValue: null },
+    status: {
+      type: DataTypes.ENUM("pending", "processing", "shipped", "delivered", "cancelled"),
+      defaultValue: "pending",
     },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Order", OrderSchema);
+export default Order;

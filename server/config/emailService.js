@@ -1,24 +1,25 @@
 import nodemailer from "nodemailer";
-import http from "http";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: true, // true for 465, false for other ports
+  port: parseInt(process.env.SMTP_PORT) || 465,
+  secure: process.env.SMTP_SECURE === "true", // true for 465, false for 587
   auth: {
-    user: process.env.EMAIL, // generated ethereal user
-    pass: process.env.EMAIL_PASS, // generated ethereal password
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
   },
 });
 
+// SMTP_FROM should be a plain email address, e.g. support@infixmart.com
+// The display name "InfixMart" is injected here.
 const sendEmail = async (to, subject, text, html) => {
   try {
     const info = await transporter.sendMail({
-      from: `"No Reply" <${process.env.EMAIL}>`, // sender address
-      to, // list of receivers
-      subject, // Subject line
-      text, // plain text body
-      html, // html body
+      from: `"InfixMart" <${process.env.SMTP_FROM}>`,
+      to,
+      subject,
+      text,
+      html,
     });
     return { success: true, messageId: info.messageId };
   } catch (error) {

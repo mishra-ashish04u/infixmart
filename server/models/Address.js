@@ -1,66 +1,25 @@
-import mongoose from "mongoose";
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/connectDB.js";
 
-const AddressSchema = new mongoose.Schema(
+const Address = sequelize.define(
+  "Address",
   {
-    name: {
-      type: String,
-      required: true,
-      default: "",
-    },
-    mobile: {
-      type: String,
-      required: true,
-      default: "",
-    },
-    pincode: {
-      type: String,
-      required: true,
-      default: "",
-    },
-    flatHouse: {
-      type: String,
-      required: true,
-      default: "",
-    },
-    areaStreet: {
-      type: String,
-      required: true,
-      default: "",
-    },
-    landmark: {
-      type: String,
-      default: "",
-    },
-    townCity: {
-      type: String,
-      required: true,
-      default: "",
-    },
-    state: {
-      type: String,
-      required: true,
-      default: "",
-    },
-    country: {
-      type: String,
-      required: true,
-      default: "India",
-    },
-    status: {
-      type: Boolean,
-      default: true,
-    },
-    isDefault: {
-      type: Boolean,
-      default: false,
-    },
-    userId: {
-      type: mongoose.Schema.ObjectId,
-      required: true,
-      ref: 'User'
-    },
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    _id: { type: DataTypes.VIRTUAL, get() { return this.id; } },
+    name: { type: DataTypes.STRING, allowNull: false },
+    mobile: { type: DataTypes.STRING, allowNull: false },
+    pincode: { type: DataTypes.STRING, allowNull: false },
+    flatHouse: { type: DataTypes.STRING, allowNull: false },
+    areaStreet: { type: DataTypes.STRING, allowNull: false },
+    landmark: { type: DataTypes.STRING, defaultValue: "" },
+    townCity: { type: DataTypes.STRING, allowNull: false },
+    state: { type: DataTypes.STRING, allowNull: false },
+    country: { type: DataTypes.STRING, allowNull: false, defaultValue: "India" },
+    status: { type: DataTypes.BOOLEAN, defaultValue: true },
+    isDefault: { type: DataTypes.BOOLEAN, defaultValue: false },
+    userId: { type: DataTypes.INTEGER, allowNull: false },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Address", AddressSchema);
+export default Address;

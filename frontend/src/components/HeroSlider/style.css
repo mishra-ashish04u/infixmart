@@ -1,0 +1,96 @@
+/* ── HeroSlider — fills parent height ── */
+.hero-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  overflow: hidden;
+  background: #e8efff;
+}
+
+.hero-skeleton {
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  background: linear-gradient(90deg, #dde8ff 25%, #c5d8ff 50%, #dde8ff 75%);
+  background-size: 200% 100%;
+  animation: hero-shimmer 1.6s infinite;
+}
+@keyframes hero-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.hero-swiper,
+.hero-swiper .swiper-wrapper,
+.hero-swiper .swiper-slide,
+.hero-swiper .swiper-slide a {
+  width: 100%;
+  height: 100%;
+}
+.hero-swiper .swiper-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* ── Arrows ── */
+.hero-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.90);
+  backdrop-filter: blur(6px);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  color: #1565C0;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+.hero-arrow:hover {
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(21,101,192,0.3);
+  transform: translateY(-50%) scale(1.08);
+}
+.hero-prev { left: 14px; }
+.hero-next { right: 14px; }
+.hero-arrow.swiper-button-disabled { opacity: 0.3; pointer-events: none; }
+
+@media (max-width: 480px) {
+  .hero-arrow { width: 32px; height: 32px; font-size: 14px; }
+  .hero-prev  { left: 8px; }
+  .hero-next  { right: 8px; }
+}
+
+/* ── Dots ── */
+.hero-dots {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hero-dots .swiper-pagination-bullet {
+  width: 7px; height: 7px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.5);
+  opacity: 1; margin: 0 !important;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.hero-dots .swiper-pagination-bullet-active {
+  background: #fff;
+  width: 26px;
+}

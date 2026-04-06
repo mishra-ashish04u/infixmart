@@ -1,21 +1,16 @@
-import mongoose from "mongoose";
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/connectDB.js";
 
-const CartProductSchema = new mongoose.Schema(
+const CartProduct = sequelize.define(
+  "CartProduct",
   {
-    productId: {
-      type: mongoose.Schema.ObjectId,
-      ref: "Product",
-    },
-    quantity: {
-      type: Number,
-      default: 1,
-    },
-    userId: {
-      type: mongoose.Schema.ObjectId,
-      ref: "user",
-    },
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    _id: { type: DataTypes.VIRTUAL, get() { return this.id; } },
+    productId: { type: DataTypes.INTEGER, allowNull: false },
+    quantity: { type: DataTypes.INTEGER, defaultValue: 1 },
+    userId: { type: DataTypes.INTEGER, allowNull: false },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("CartProduct", CartProductSchema);
+export default CartProduct;

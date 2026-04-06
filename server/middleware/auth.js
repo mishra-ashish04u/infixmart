@@ -2,25 +2,13 @@ import jwt from "jsonwebtoken";
 
 const auth = async (req, res, next) => {
   try {
-    console.log("Cookies:", req.cookies);
-    console.log("Headers Auth:", req.headers.authorization);
-
     const token =
       req.cookies.accessToken || req?.headers?.authorization?.split(" ")[1];
 
     if (!token) {
-      console.log("No token provided");
       return res
         .status(401)
-        .json({
-          message: "Unauthorized",
-          error: true,
-          success: false,
-          debug: {
-            authHeader: req?.headers?.authorization,
-            cookies: req.cookies
-          }
-        });
+        .json({ message: "Unauthorized", error: true, success: false });
     }
     const decoded = await jwt.verify(
       token,

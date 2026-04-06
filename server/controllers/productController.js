@@ -1,55 +1,59 @@
 import Product from "../models/Product.js";
-
-import { v2 as cloudinary } from "cloudinary";
+import { Op } from "sequelize";
 import fs from "fs";
+import { sanitizeRichText } from "../utils/htmlSanitizer.js";
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
+// ── Slug helper ───────────────────────────────────────────────────────────────
+const toSlug = (str) =>
+  str.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-var imagesArr = [];
+const uniqueProductSlug = async (name, excludeId = null) => {
+  let base = toSlug(name);
+  let slug = base;
+  let n = 1;
+  while (true) {
+    const where = { slug };
+    if (excludeId) where.id = { [Op.ne]: excludeId };
+    const exists = await Product.findOne({ where });
+    if (!exists) break;
+    slug = `${base}-${n++}`;
+  }
+  return slug;
+};
+
 export const uploadImages = async (req, res) => {
   try {
-    imagesArr = [];
-
-    const image = req.files;
-
-    const options = {
-      use_filename: true,
-      unique_filename: false,
-      overwrite: false,
-    };
-
-    for (let i = 0; i < req?.files?.length; i++) {
-      // Use promise style, not callback
-      const result = await cloudinary.uploader.upload(
-        req?.files[i]?.path,
-        options
-      );
-      imagesArr.push(result.secure_url);
-      fs.unlinkSync(`uploads/${req?.files[i]?.filename}`);
-    }
-
-    return res.status(200).json({
-      images: imagesArr,
-      message: "Image uploaded successfully",
-    });
+    const imageUrls = req.files.map((file) => `/uploads/${file.filename}`);
+    return res.status(200).json({ images: imageUrls, message: "Image uploaded successfully" });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
 export const createProduct = async (req, res) => {
   try {
-    let product = new Product({
+    const images = Array.isArray(req.body.images)
+      ? req.body.images
+      : JSON.parse(req.body.images || "[]");
+
+    // Auto-generate slug if not provided
+    const slug = req.body.slug
+      ? await uniqueProductSlug(req.body.slug)
+      : await uniqueProductSlug(req.body.name || "product");
+
+    // Auto-generate SKU if not provided
+    const sku = req.body.sku
+      ? req.body.sku.trim().toUpperCase()
+      : `SKU-${Date.now()}`;
+
+    const description = sanitizeRichText(req.body.description || "");
+
+    const product = await Product.create({
       name: req.body.name,
-      description: req.body.description,
-      images: imagesArr,
+      slug,
+      sku,
+      description,
+      images,
       brand: req.body.brand || null,
       price: req.body.price || 0,
       oldprice: req.body.oldprice || 0,
@@ -64,30 +68,13 @@ export const createProduct = async (req, res) => {
       isFeatured: req.body.isFeatured || false,
       discount: req.body.discount,
       productRam: req.body.productRam || null,
-      size: req.body.size || null,
-      productWeight: req.body.productWeight || null,
+      size: Array.isArray(req.body.size) ? req.body.size : JSON.parse(req.body.size || "[]"),
+      productWeight: Array.isArray(req.body.productWeight) ? req.body.productWeight : JSON.parse(req.body.productWeight || "[]"),
     });
 
-    product = await product.save();
-
-    if (!product) {
-      return res
-        .status(400)
-        .json({ message: "Product not created", error: true, success: false });
-    }
-
-    imagesArr = [];
-
-    return res.status(201).json({
-      product,
-      message: "Product created successfully",
-      success: true,
-      error: false,
-    });
+    return res.status(201).json({ product, message: "Product created successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
@@ -96,54 +83,40 @@ export const getAllProducts = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const perPage = parseInt(req.query.perPage) || 10;
 
-    // Build query object
-    let query = {};
-    if (req.query.category && req.query.category !== "") {
-      query.catId = req.query.category;
-    }
-    if (req.query.subCategory && req.query.subCategory !== "") {
-      query.subCatId = req.query.subCategory;
-    }
-    if (req.query.thirdCategory && req.query.thirdCategory !== "") {
-      query.thirdSubCatId = req.query.thirdCategory;
-    }
-    if (req.query.search && req.query.search !== "") {
-      query.name = { $regex: req.query.search, $options: "i" };
-    }
-
-    const totalPosts = await Product.countDocuments(query);
-    const totalPages = Math.ceil(totalPosts / perPage);
-
-    if (page > totalPages && totalPages !== 0) {
-      return res
-        .status(400)
-        .json({ message: "Invalid page number", error: true, success: false });
+    const where = {};
+    if (req.query.category) where.catId = req.query.category;
+    if (req.query.subCategory) where.subCatId = req.query.subCategory;
+    if (req.query.thirdCategory) where.thirdSubCatId = req.query.thirdCategory;
+    if (req.query.search) where.name = { [Op.like]: `%${req.query.search}%` };
+    if (req.query.onSale === "true") where.discount = { [Op.gt]: 0 };
+    if (req.query.minRating) where.rating = { [Op.gte]: Number(req.query.minRating) };
+    if (req.query.inStockOnly === "true") where.countInStock = { [Op.gt]: 0 };
+    if (req.query.minPrice && req.query.maxPrice) {
+      where.price = { [Op.between]: [+req.query.minPrice, +req.query.maxPrice] };
+    } else if (req.query.minPrice) {
+      where.price = { [Op.gte]: +req.query.minPrice };
+    } else if (req.query.maxPrice) {
+      where.price = { [Op.lte]: +req.query.maxPrice };
     }
 
-    const products = await Product.find(query)
-      .populate("catId")
-      .skip((page - 1) * perPage)
-      .limit(perPage)
-      .exec();
+    // Build order clause
+    let order = [["createdAt", "DESC"]];
+    const sort = req.query.sort;
+    if (sort === "price-asc")   order = [["price", "ASC"]];
+    else if (sort === "price-desc")  order = [["price", "DESC"]];
+    else if (sort === "rating-desc") order = [["rating", "DESC"]];
+    else if (sort === "name-asc")    order = [["name", "ASC"]];
+    else if (sort === "popular")     order = [["rating", "DESC"]];
+    else if (sort === "bestseller")  order = [["discount", "DESC"], ["rating", "DESC"]];
 
-    if (!products) {
-      return res
-        .status(404)
-        .json({ message: "No products found", error: true, success: false });
-    }
+    const totalPosts = await Product.count({ where });
+    const totalPages = Math.ceil(totalPosts / perPage) || 1;
 
-    return res.status(200).json({
-      products,
-      totalPages,
-      page,
-      message: "Products fetched successfully",
-      success: true,
-      error: false,
-    });
+    const products = await Product.findAll({ where, order, offset: (page - 1) * perPage, limit: perPage });
+
+    return res.status(200).json({ products, totalPages, page, message: "Products fetched successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
@@ -151,39 +124,18 @@ export const getProductByCatId = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const perPage = parseInt(req.query.perPage) || 10000;
-    const totalPosts = await Product.countDocuments();
+    const totalPosts = await Product.count();
     const totalPages = Math.ceil(totalPosts / perPage);
 
-    if (page > totalPages && totalPages !== 0) {
-      return res
-        .status(400)
-        .json({ message: "Invalid page number", error: true, success: false });
-    }
-
-    const products = await Product.find({ catId: req.params.id })
-      .populate("catId")
-      .skip((page - 1) * perPage)
-      .limit(perPage)
-      .exec();
-
-    if (!products) {
-      return res
-        .status(404)
-        .json({ message: "No products found", error: true, success: false });
-    }
-
-    return res.status(200).json({
-      products,
-      totalPages,
-      page,
-      message: "Products fetched successfully",
-      success: true,
-      error: false,
+    const products = await Product.findAll({
+      where: { catId: req.params.id },
+      offset: (page - 1) * perPage,
+      limit: perPage,
     });
+
+    return res.status(200).json({ products, totalPages, page, message: "Products fetched successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
@@ -191,39 +143,18 @@ export const getProductByCatName = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const perPage = parseInt(req.query.perPage) || 10000;
-    const totalPosts = await Product.countDocuments();
+    const totalPosts = await Product.count();
     const totalPages = Math.ceil(totalPosts / perPage);
 
-    if (page > totalPages && totalPages !== 0) {
-      return res
-        .status(400)
-        .json({ message: "Invalid page number", error: true, success: false });
-    }
-
-    const products = await Product.find({ catName: req.query.catName })
-      .populate("catId")
-      .skip((page - 1) * perPage)
-      .limit(perPage)
-      .exec();
-
-    if (!products) {
-      return res
-        .status(404)
-        .json({ message: "No products found", error: true, success: false });
-    }
-
-    return res.status(200).json({
-      products,
-      totalPages,
-      page,
-      message: "Products fetched successfully",
-      success: true,
-      error: false,
+    const products = await Product.findAll({
+      where: { catName: req.query.catName },
+      offset: (page - 1) * perPage,
+      limit: perPage,
     });
+
+    return res.status(200).json({ products, totalPages, page, message: "Products fetched successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
@@ -231,433 +162,183 @@ export const getProductBySubCatId = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const perPage = parseInt(req.query.perPage) || 10000;
-    const totalPosts = await Product.countDocuments();
+    const totalPosts = await Product.count();
     const totalPages = Math.ceil(totalPosts / perPage);
 
-    if (page > totalPages && totalPages !== 0) {
-      return res
-        .status(400)
-        .json({ message: "Invalid page number", error: true, success: false });
-    }
-
-    const products = await Product.find({ subCatId: req.params.id })
-      .populate("catId")
-      .skip((page - 1) * perPage)
-      .limit(perPage)
-      .exec();
-
-    if (!products) {
-      return res
-        .status(404)
-        .json({ message: "No products found", error: true, success: false });
-    }
-
-    return res.status(200).json({
-      products,
-      totalPages,
-      page,
-      message: "Products fetched successfully",
-      success: true,
-      error: false,
+    const products = await Product.findAll({
+      where: { subCatId: req.params.id },
+      offset: (page - 1) * perPage,
+      limit: perPage,
     });
+
+    return res.status(200).json({ products, totalPages, page, message: "Products fetched successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
 export const getProductBySubCatName = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const perPage = parseInt(req.query.perPage) || 10000;
-    const totalPosts = await Product.countDocuments();
-    const totalPages = Math.ceil(totalPosts / perPage);
-
-    if (page > totalPages && totalPages !== 0) {
-      return res
-        .status(400)
-        .json({ message: "Invalid page number", error: true, success: false });
-    }
-
-    const products = await Product.find({ subCat: req.query.subCat })
-      .populate("catId")
-      .skip((page - 1) * perPage)
-      .limit(perPage)
-      .exec();
-
-    if (!products) {
-      return res
-        .status(404)
-        .json({ message: "No products found", error: true, success: false });
-    }
-
-    return res.status(200).json({
-      products,
-      totalPages,
-      page,
-      message: "Products fetched successfully",
-      success: true,
-      error: false,
-    });
+    const products = await Product.findAll({ where: { subCat: req.query.subCat } });
+    return res.status(200).json({ products, message: "Products fetched successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
 export const getProductByThirdSubCatId = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const perPage = parseInt(req.query.perPage) || 10000;
-    const totalPosts = await Product.countDocuments();
-    const totalPages = Math.ceil(totalPosts / perPage);
-
-    if (page > totalPages && totalPages !== 0) {
-      return res
-        .status(400)
-        .json({ message: "Invalid page number", error: true, success: false });
-    }
-
-    const products = await Product.find({ thirdSubCatId: req.params.id })
-      .populate("catId")
-      .skip((page - 1) * perPage)
-      .limit(perPage)
-      .exec();
-
-    if (!products) {
-      return res
-        .status(404)
-        .json({ message: "No products found", error: true, success: false });
-    }
-
-    return res.status(200).json({
-      products,
-      totalPages,
-      page,
-      message: "Products fetched successfully",
-      success: true,
-      error: false,
-    });
+    const products = await Product.findAll({ where: { thirdSubCatId: req.params.id } });
+    return res.status(200).json({ products, message: "Products fetched successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
 export const getProductByThirdSubCatName = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const perPage = parseInt(req.query.perPage) || 10000;
-    const totalPosts = await Product.countDocuments();
-    const totalPages = Math.ceil(totalPosts / perPage);
-
-    if (page > totalPages && totalPages !== 0) {
-      return res
-        .status(400)
-        .json({ message: "Invalid page number", error: true, success: false });
-    }
-
-    const products = await Product.find({ thirdSubCat: req.query.thirdSubCat })
-      .populate("catId")
-      .skip((page - 1) * perPage)
-      .limit(perPage)
-      .exec();
-
-    if (!products) {
-      return res
-        .status(404)
-        .json({ message: "No products found", error: true, success: false });
-    }
-
-    return res.status(200).json({
-      products,
-      totalPages,
-      page,
-      message: "Products fetched successfully",
-      success: true,
-      error: false,
-    });
+    const products = await Product.findAll({ where: { thirdSubCat: req.query.thirdSubCat } });
+    return res.status(200).json({ products, message: "Products fetched successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
 export const getProductByPrice = async (req, res) => {
   try {
-    let productList = [];
+    const where = {};
+    if (req.query.catId) where.catId = req.query.catId;
+    else if (req.query.subCatId) where.subCatId = req.query.subCatId;
+    else if (req.query.thirdSubCatId) where.thirdSubCatId = req.query.thirdSubCatId;
 
-    if (req.query.catId !== "" && req.query.catId !== undefined) {
-      const productListArr = await Product.find({
-        catId: req.query.catId,
-      }).populate("catId");
-
-      productList = productListArr;
-    }
-    if (req.query.subCatId !== "" && req.query.subCatId !== undefined) {
-      const productListArr = await Product.find({
-        subCatId: req.query.subCatId,
-      }).populate("catId");
-
-      productList = productListArr;
-    }
-    if (
-      req.query.thirdSubCatId !== "" &&
-      req.query.thirdSubCatId !== undefined
-    ) {
-      const productListArr = await Product.find({
-        thirdSubCatId: req.query.thirdSubCatId,
-      }).populate("catId");
-
-      productList = productListArr;
+    if (req.query.minPrice && req.query.maxPrice) {
+      where.price = { [Op.between]: [+req.query.minPrice, +req.query.maxPrice] };
+    } else if (req.query.minPrice) {
+      where.price = { [Op.gte]: +req.query.minPrice };
+    } else if (req.query.maxPrice) {
+      where.price = { [Op.lte]: +req.query.maxPrice };
     }
 
-    const filteredProducts = productList.filter((product) => {
-      if (req.query.minPrice && product.price < parseInt(+req.query.minPrice)) {
-        return false;
-      }
-      if (req.query.maxPrice && product.price > parseInt(+req.query.maxPrice)) {
-        return false;
-      }
-      return true;
-    });
+    const products = await Product.findAll({ where });
 
-    return res.status(200).json({
-      products: filteredProducts,
-      message: "Products fetched successfully",
-      totalPages: 0,
-      page: 0,
-      success: true,
-      error: false,
-    });
+    return res.status(200).json({ products, message: "Products fetched successfully", totalPages: 0, page: 0, success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
 export const getProductByRating = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const perPage = parseInt(req.query.perPage) || 10000;
-    const totalPosts = await Product.countDocuments();
-    const totalPages = Math.ceil(totalPosts / perPage);
+    const where = { rating: req.query.rating };
+    if (req.query.catId) where.catId = req.query.catId;
+    else if (req.query.subCatId) where.subCatId = req.query.subCatId;
+    else if (req.query.thirdSubCatId) where.thirdSubCatId = req.query.thirdSubCatId;
 
-    if (page > totalPages && totalPages !== 0) {
-      return res
-        .status(400)
-        .json({ message: "Invalid page number", error: true, success: false });
-    }
+    const products = await Product.findAll({ where });
 
-    let products = [];
-
-    if (req.query.catId !== undefined) {
-      products = await Product.find({
-        rating: req.query.rating,
-        catId: req.query.catId,
-      })
-        .populate("catId")
-        .skip((page - 1) * perPage)
-        .limit(perPage)
-        .exec();
-    }
-
-    if (req.query.subCatId !== undefined) {
-      products = await Product.find({
-        rating: req.query.rating,
-        subCatId: req.query.subCatId,
-      })
-        .populate("catId")
-        .skip((page - 1) * perPage)
-        .limit(perPage)
-        .exec();
-    }
-
-    if (req.query.thirdSubCatId !== undefined) {
-      products = await Product.find({
-        rating: req.query.rating,
-        thirdSubCatId: req.query.thirdSubCatId,
-      })
-        .populate("catId")
-        .skip((page - 1) * perPage)
-        .limit(perPage)
-        .exec();
-    }
-
-    if (!products) {
-      return res
-        .status(404)
-        .json({ message: "No products found", error: true, success: false });
-    }
-
-    return res.status(200).json({
-      products,
-      totalPages,
-      page,
-      message: "Products fetched successfully",
-      success: true,
-      error: false,
-    });
+    return res.status(200).json({ products, message: "Products fetched successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
 export const getProductCount = async (req, res) => {
   try {
-    const productCount = await Product.countDocuments();
-
-    if (!productCount) {
-      return res
-        .status(404)
-        .json({ message: "No products found", error: true, success: false });
-    }
-
-    return res.status(200).json({
-      productCount,
-      message: "Product count fetched successfully",
-      success: true,
-      error: false,
-    });
+    const productCount = await Product.count();
+    return res.status(200).json({ productCount, message: "Product count fetched successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
 export const getFeaturedProduct = async (req, res) => {
   try {
-    const products = await Product.find({ isFeatured: true }).populate("catId");
-
-    if (!products) {
-      return res
-        .status(404)
-        .json({ message: "No products found", error: true, success: false });
-    }
-
-    return res.status(200).json({
-      products,
-      message: "Featured Products fetched successfully",
-      success: true,
-      error: false,
-    });
+    const products = await Product.findAll({ where: { isFeatured: true } });
+    return res.status(200).json({ products, message: "Featured Products fetched successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
 export const deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate("catId");
-
+    const product = await Product.findByPk(req.params.id);
     if (!product) {
-      return res
-        .status(404)
-        .json({ message: "Product not found", error: true, success: false });
+      return res.status(404).json({ message: "Product not found", error: true, success: false });
     }
 
-    const images = product.images;
-
-    for (img of images) {
-      const imgUrl = img;
-      const urlArr = imgUrl.split("/");
-      const image = urlArr[urlArr.length - 1];
-      const imagename = image.split(".")[0];
-
-      if (imagename) {
-        await cloudinary.uploader.destroy(imagename, function (error, result) {
-          // console.log(result, error);
-        });
-      }
+    // Delete local image files
+    for (const img of product.images) {
+      const filename = img.split("/uploads/")[1];
+      if (filename) { try { fs.unlinkSync(`uploads/${filename}`); } catch (e) {} }
     }
 
-    const deletedProduct = await Product.findByIdAndDelete(req.params.id);
+    await Product.destroy({ where: { id: req.params.id } });
 
-    if (!deletedProduct) {
-      return res
-        .status(400)
-        .json({ message: "Product not deleted", error: true, success: false });
-    }
-
-    return res.status(200).json({
-      message: "Product deleted successfully",
-      success: true,
-      error: false,
-    });
+    return res.status(200).json({ message: "Product deleted successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
 export const getSingleProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate("catId");
-
+    const product = await Product.findByPk(req.params.id);
     if (!product) {
-      return res
-        .status(404)
-        .json({ message: "Product not found", error: true, success: false });
+      return res.status(404).json({ message: "Product not found", error: true, success: false });
     }
-
-    return res.status(200).json({
-      product,
-      message: "Product fetched successfully",
-      success: true,
-      error: false,
-    });
+    return res.status(200).json({ product, message: "Product fetched successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
-export const deleteImageFromCloudinary = async (req, res) => {
+export const getProductBySlug = async (req, res) => {
   try {
-    const imgUrl = req.query.img;
-    const urlArr = imgUrl.split("/");
-    const image = urlArr[urlArr.length - 1];
-    const imageName = image.split(".")[0];
-
-    if (imageName) {
-      const result = await cloudinary.uploader.destroy(
-        imageName,
-        function (error, result) {
-          //console.log(result, error);
-        }
-      );
-
-      if (result) {
-        res.status(200).send(result);
-      }
+    const product = await Product.findOne({ where: { slug: req.params.slug } });
+    if (!product) {
+      return res.status(404).json({ message: "Product not found", error: true, success: false });
     }
+    return res.status(200).json({ product, message: "Product fetched successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
+  }
+};
+
+export const deleteImage = async (req, res) => {
+  try {
+    const imgPath = req.query.img;
+    const filename = imgPath.split("/uploads/")[1];
+    if (filename) { try { fs.unlinkSync(`uploads/${filename}`); } catch (e) {} }
+    return res.status(200).json({ result: "ok" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
 export const updateProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
+    const images = Array.isArray(req.body.images)
+      ? req.body.images
+      : JSON.parse(req.body.images || "[]");
+
+    // Compute slug: if provided use it (ensure unique), else keep existing
+    let slugUpdate = undefined;
+    if (req.body.slug) {
+      slugUpdate = await uniqueProductSlug(req.body.slug, req.params.id);
+    }
+
+    const skuUpdate = req.body.sku ? req.body.sku.trim().toUpperCase() : undefined;
+
+    const description = sanitizeRichText(req.body.description || "");
+
+    await Product.update(
       {
         name: req.body.name,
-        description: req.body.description,
-        images: req.body.images,
+        ...(slugUpdate !== undefined && { slug: slugUpdate }),
+        ...(skuUpdate  !== undefined && { sku:  skuUpdate }),
+        description,
+        images,
         brand: req.body.brand || null,
         price: req.body.price || 0,
         oldprice: req.body.oldprice || 0,
@@ -672,30 +353,17 @@ export const updateProduct = async (req, res) => {
         isFeatured: req.body.isFeatured || false,
         discount: req.body.discount,
         productRam: req.body.productRam || null,
-        size: req.body.size || null,
-        productWeight: req.body.productWeight || null,
+        size: Array.isArray(req.body.size) ? req.body.size : JSON.parse(req.body.size || "[]"),
+        productWeight: Array.isArray(req.body.productWeight) ? req.body.productWeight : JSON.parse(req.body.productWeight || "[]"),
       },
-      { new: true }
+      { where: { id: req.params.id } }
     );
 
-    if (!product) {
-      return res
-        .status(400)
-        .json({ message: "Product not updated", error: true, success: false });
-    }
+    const product = await Product.findByPk(req.params.id);
 
-    imagesArr = [];
-
-    return res.status(200).json({
-      product,
-      message: "Product updated successfully",
-      success: true,
-      error: false,
-    });
+    return res.status(200).json({ product, message: "Product updated successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };
 
@@ -706,31 +374,18 @@ export const deleteMultipleProducts = async (req, res) => {
       return res.status(400).json({ message: "No product IDs provided", error: true, success: false });
     }
 
-    const products = await Product.find({ _id: { $in: ids } });
-
+    const products = await Product.findAll({ where: { id: { [Op.in]: ids } } });
     for (const product of products) {
-      if (product.images && product.images.length > 0) {
-        for (const imgUrl of product.images) {
-          const urlArr = imgUrl.split("/");
-          const image = urlArr[urlArr.length - 1];
-          const imagename = image.split(".")[0];
-          if (imagename) {
-            await cloudinary.uploader.destroy(imagename, function (error, result) { });
-          }
-        }
+      for (const img of product.images) {
+        const filename = img.split("/uploads/")[1];
+        if (filename) { try { fs.unlinkSync(`uploads/${filename}`); } catch (e) {} }
       }
     }
 
-    await Product.deleteMany({ _id: { $in: ids } });
+    await Product.destroy({ where: { id: { [Op.in]: ids } } });
 
-    return res.status(200).json({
-      message: "Products deleted successfully",
-      success: true,
-      error: false,
-    });
+    return res.status(200).json({ message: "Products deleted successfully", success: true, error: false });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: error.message || error, error: true, success: false });
+    return res.status(500).json({ message: "Internal server error", error: true, success: false });
   }
 };

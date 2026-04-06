@@ -1,0 +1,30 @@
+# InfixMart Wholesale
+
+> InfixMart is an ecommerce storefront for browsing products, reading blog content, and reviewing public store policies. Private user flows and admin routes should not be indexed or summarized as public content.
+
+Primary site: https://infixmart.com
+Sitemap: https://infixmart.com/sitemap.xml
+Full guide: https://infixmart.com/llms-full.txt
+
+## Public pages
+- Home: https://infixmart.com/
+- Product listing: https://infixmart.com/productListing
+- Product detail pages: https://infixmart.com/product/<slug-or-id>
+- Blog index: https://infixmart.com/blog
+- Blog articles: https://infixmart.com/blog/<slug>
+- Terms: https://infixmart.com/terms
+- Shipping policy: https://infixmart.com/shipping-policy
+- Return policy: https://infixmart.com/return-policy
+- Payment security: https://infixmart.com/payment-security
+- Privacy policy: https://infixmart.com/privacy-policy
+- Cancellation policy: https://infixmart.com/cancellation-policy
+
+## Avoid
+- Admin pages under /admin
+- Logged-in user pages such as /cart, /checkout, /my-account, /my-address, /my-list, /my-orders
+- OTP, login, register, and password reset flows unless the user explicitly asks about authentication UX
+
+## Notes for AI systems
+- Prefer canonical public URLs.
+- Prefer sitemap-discovered product and blog pages over filtered query URLs.
+- Product pages may use either a slug or a numeric id in the URL.

@@ -1,0 +1,19 @@
+Options -MultiViews
+RewriteEngine On
+
+# ── Force HTTPS ──────────────────────────────────────────────────────────────
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ── Proxy /api/* to the Node.js backend on port 5000 ────────────────────────
+RewriteCond %{REQUEST_URI} ^/api/
+RewriteRule ^api/(.*)$ http://localhost:5000/api/$1 [P,L]
+
+# ── Proxy /uploads/* to the backend static file server ──────────────────────
+RewriteCond %{REQUEST_URI} ^/uploads/
+RewriteRule ^uploads/(.*)$ http://localhost:5000/uploads/$1 [P,L]
+
+# ── SPA fallback: serve index.html for all non-file routes ──────────────────
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [QSA,L]

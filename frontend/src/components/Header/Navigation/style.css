@@ -1,0 +1,13 @@
+/* Category panel drawer buttons */
+.categoryPanel button {
+  text-transform: capitalize !important;
+}
+
+/* Hide scrollbar on category nav strip */
+nav .scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+nav .scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

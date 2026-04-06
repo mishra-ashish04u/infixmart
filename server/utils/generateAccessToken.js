@@ -5,7 +5,7 @@ const generateAccessToken = async (userId) => {
     { id: userId },
     process.env.JWT_SECRET_ACCESS_TOKEN,
     {
-      expiresIn: "5h",
+      expiresIn: "15m", // OWASP A07: short-lived access tokens
     }
   );
   return token;

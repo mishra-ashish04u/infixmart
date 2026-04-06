@@ -1,0 +1,58 @@
+import React from 'react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import { Navigation } from 'swiper/modules';
+import ProductItem from '../ProductItem';
+
+const SkeletonCard = () => (
+  <div className='overflow-hidden rounded-md border border-[rgba(0,0,0,0.08)] bg-white animate-pulse'>
+    <div className='h-[220px] bg-gray-200' />
+    <div className='p-3 py-5 space-y-2'>
+      <div className='h-3 bg-gray-200 rounded w-1/2' />
+      <div className='h-4 bg-gray-200 rounded w-3/4' />
+      <div className='h-3 bg-gray-200 rounded w-1/3' />
+      <div className='h-4 bg-gray-200 rounded w-2/5' />
+    </div>
+  </div>
+);
+
+const ProductSlider = ({ items = 6, products }) => {
+  const isLoading = products === undefined || products === null;
+  const displayItems = isLoading
+    ? Array(items).fill(null)
+    : products;
+
+  if (!isLoading && displayItems.length === 0) return null;
+
+  return (
+    <div className='py-3 productSlider'>
+      <Swiper
+        slidesPerView={2}
+        spaceBetween={8}
+        modules={[Navigation]}
+        navigation={true}
+        breakpoints={{
+          480:  { slidesPerView: 2, spaceBetween: 10 },
+          640:  { slidesPerView: 3, spaceBetween: 10 },
+          1024: { slidesPerView: Math.min(items, 5), spaceBetween: 10 },
+          1280: { slidesPerView: items, spaceBetween: 10 },
+        }}
+        className="mySwiper"
+      >
+        {isLoading
+          ? displayItems.map((_, i) => (
+              <SwiperSlide key={i}><SkeletonCard /></SwiperSlide>
+            ))
+          : displayItems.map((product) => (
+              <SwiperSlide key={product.id}>
+                <ProductItem item={product} />
+              </SwiperSlide>
+            ))
+        }
+      </Swiper>
+    </div>
+  );
+};
+
+export default ProductSlider;

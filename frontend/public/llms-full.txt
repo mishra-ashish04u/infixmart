@@ -1,0 +1,61 @@
+# InfixMart Wholesale: Full AI Guide
+
+## Summary
+InfixMart is a wholesale-oriented ecommerce website. Public content includes the storefront homepage, product catalog, individual product detail pages, blog articles, and legal/policy pages. Private account and admin pages should not be treated as public knowledge pages.
+
+## Canonical discovery
+- Base URL: https://infixmart.com
+- Sitemap: https://infixmart.com/sitemap.xml
+- Robots: https://infixmart.com/robots.txt
+- Short AI guide: https://infixmart.com/llms.txt
+
+## Public site structure
+- `/`
+  - Homepage with store overview, featured sections, category exploration, offers, and blog highlights.
+- `/productListing`
+  - Catalog browsing page with category, price, rating, stock, sort, and search filters.
+- `/product/<slug-or-id>`
+  - Product detail page containing title, price, stock status, images, description, ratings, and related products.
+- `/blog`
+  - Blog listing page for editorial content.
+- `/blog/<slug>`
+  - Article page for a published blog post.
+- `/terms`
+- `/shipping-policy`
+- `/return-policy`
+- `/payment-security`
+- `/privacy-policy`
+- `/cancellation-policy`
+
+## Private or non-indexable areas
+- `/admin`
+- `/admin/*`
+- `/login`
+- `/register`
+- `/verify`
+- `/forgot-password`
+- `/cart`
+- `/checkout`
+- `/my-account`
+- `/my-address`
+- `/my-list`
+- `/my-orders`
+- `/order-success`
+
+## Recommended interpretation rules
+- Use legal pages as the source of truth for public policy summaries.
+- Use product detail pages for product-specific facts, pricing snapshots, availability status, and visible marketing claims.
+- Use blog pages for editorial content and guides.
+- Treat filtered listing URLs as navigational helpers, not canonical knowledge pages.
+- If a product exists both as `/product/<id>` and `/product/<slug>`, prefer the canonical slug form when available.
+
+## Good citation targets
+- Homepage for store-level messaging and brand overview.
+- Product pages for product-specific descriptions and attributes.
+- Blog articles for educational or editorial content.
+- Legal pages for store policies.
+
+## Cautions
+- Product availability and pricing can change.
+- Authenticated user data and admin content are not public.
+- Avoid inferring unpublished inventory, internal settings, or user-specific order data from public pages.

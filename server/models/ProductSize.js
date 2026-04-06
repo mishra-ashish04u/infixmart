@@ -1,14 +1,14 @@
-import mongoose from "mongoose";
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/connectDB.js";
 
-const productSizeSchema = new mongoose.Schema(
-    {
-        name: {
-            type: String,
-            required: true,
-            trim: true,
-        },
-    },
-    { timestamps: true }
+const ProductSize = sequelize.define(
+  "ProductSize",
+  {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    _id: { type: DataTypes.VIRTUAL, get() { return this.id; } },
+    name: { type: DataTypes.STRING, allowNull: false },
+  },
+  { timestamps: true }
 );
 
-export const ProductSize = mongoose.model("ProductSize", productSizeSchema);
+export { ProductSize };
