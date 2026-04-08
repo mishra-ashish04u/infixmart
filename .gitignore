@@ -2,7 +2,8 @@
 node_modules/
 
 # ── Next.js build output ──────────────────────────────────────────────────────
-.next/
+# .next/ is committed so Hostinger doesn't need to build on the server
+.next/cache/
 out/
 
 # ── Environment variables (NEVER commit these) ────────────────────────────────

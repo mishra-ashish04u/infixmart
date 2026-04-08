@@ -1,24 +1,41 @@
+import http from "node:http";
 import { getInternalServerBaseUrl } from "./internalServer.js";
-// Use undici directly to bypass Next.js's patched global fetch,
-// which adds caching/deduplication that breaks localhost proxy requests.
-import { fetch as undiciFetch } from "undici";
 
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
 
-function copyResponseHeaders(sourceHeaders) {
-  const headers = new Headers();
-
-  sourceHeaders.forEach((value, key) => {
-    headers.append(key, value);
-  });
-
-  if (typeof sourceHeaders.getSetCookie === "function") {
-    for (const cookie of sourceHeaders.getSetCookie()) {
-      headers.append("set-cookie", cookie);
+// Use node:http directly to bypass Next.js's patched global fetch,
+// which adds caching/deduplication that breaks localhost proxy requests.
+function nodeHttpFetch(urlString, { method, headers, body } = {}) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(urlString);
+    const reqHeaders = {};
+    if (headers) {
+      for (const [k, v] of (headers instanceof Headers ? headers.entries() : Object.entries(headers))) {
+        reqHeaders[k] = v;
+      }
     }
-  }
 
-  return headers;
+    const req = http.request(
+      { hostname: url.hostname, port: url.port, path: url.pathname + url.search, method: method || "GET", headers: reqHeaders },
+      (res) => {
+        const chunks = [];
+        res.on("data", (chunk) => chunks.push(chunk));
+        res.on("end", () => {
+          const buffer = Buffer.concat(chunks);
+          const responseHeaders = new Headers();
+          for (const [k, v] of Object.entries(res.headers)) {
+            if (Array.isArray(v)) v.forEach((val) => responseHeaders.append(k, val));
+            else if (v) responseHeaders.append(k, v);
+          }
+          resolve(new Response(buffer, { status: res.statusCode, headers: responseHeaders }));
+        });
+        res.on("error", reject);
+      }
+    );
+    req.on("error", reject);
+    if (body) req.write(body);
+    req.end();
+  });
 }
 
 export async function proxyLegacyRequest(request, targetPath) {
@@ -31,21 +48,14 @@ export async function proxyLegacyRequest(request, targetPath) {
   headers.delete("connection");
   headers.delete("content-length");
 
-  const init = {
+  const options = {
     method: request.method,
     headers,
-    redirect: "manual",
   };
 
   if (!BODYLESS_METHODS.has(request.method)) {
-    init.body = Buffer.from(await request.arrayBuffer());
+    options.body = Buffer.from(await request.arrayBuffer());
   }
 
-  const response = await undiciFetch(targetUrl, init);
-
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: copyResponseHeaders(response.headers),
-  });
+  return nodeHttpFetch(targetUrl.toString(), options);
 }
