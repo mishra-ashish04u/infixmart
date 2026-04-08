@@ -1,0 +1,35 @@
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+/*
+  Tailwind preflight resets <button> to have no cursor.
+  MUI relies on pointer being set, so restore it here globally.
+*/
+button,
+[role="button"] {
+  cursor: pointer;
+}
+
+/*
+  Tailwind preflight strips <a> colour/decoration.
+  MUI and our components rely on inherited link colour — restore it.
+*/
+a {
+  color: inherit;
+}
+
+/*
+  Tailwind preflight resets <img> to display:block which breaks some
+  inline-image layouts. Keep as inline-block by default; components that
+  need block can set it explicitly.
+*/
+img {
+  display: inline-block;
+  max-width: 100%;
+}

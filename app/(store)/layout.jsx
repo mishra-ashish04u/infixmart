@@ -1,0 +1,7 @@
+"use client";
+
+import CustomerLayout from "../_legacy/components/CustomerLayout.jsx";
+
+export default function StoreLayout({ children }) {
+  return <CustomerLayout>{children}</CustomerLayout>;
+}

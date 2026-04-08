@@ -1,7 +1,29 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cat /c/Users/ashis/OneDrive/Desktop/ecom/my-project/.env*)"
+      "Bash(cat /c/Users/ashis/OneDrive/Desktop/ecom/my-project/.env*)",
+      "Bash(find \"c:/Users/ashis/OneDrive/Desktop/NextJs InfixMart/app/api/_server/controllers\" -type f -name \"*.js\" -exec wc -l {} +)",
+      "Bash(git -C \"c:/Users/ashis/OneDrive/Desktop/NextJs InfixMart\" log --oneline -10)",
+      "Bash(git -C \"c:/Users/ashis/OneDrive/Desktop/NextJs InfixMart\" log --oneline --all)",
+      "Bash(git -C \"c:/Users/ashis/OneDrive/Desktop/NextJs InfixMart\" ls-files)",
+      "Bash(node -e ':*)",
+      "Bash(taskkill /PID 13896 /F)",
+      "Bash(cmd /c \"taskkill /PID 13896 /F\")",
+      "Bash(cmd /c \"taskkill /PID 13896 /F 2>&1\")",
+      "Bash(powershell -Command \"Stop-Process -Id 13896 -Force -ErrorAction SilentlyContinue; Write-Host 'Done'\")",
+      "Bash(timeout 60 node -e ':*)",
+      "Bash(npx next:*)",
+      "Bash(kill %1)",
+      "Bash(wait)",
+      "Bash(powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host 'All node processes killed'\")",
+      "Bash(powershell -Command \"Remove-Item -Recurse -Force 'c:\\\\Users\\\\ashis\\\\OneDrive\\\\Desktop\\\\NextJs InfixMart\\\\.next' -ErrorAction SilentlyContinue; Write-Host 'Cache cleared'\")",
+      "Bash(node -e \"require\\('next/package.json'\\)\")",
+      "Bash(powershell -Command \"Stop-Process -Id 16700 -Force -ErrorAction SilentlyContinue; Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host 'Done'\")",
+      "Bash(powershell -Command \"Start-Sleep 2; Remove-Item -Recurse -Force 'c:\\\\Users\\\\ashis\\\\OneDrive\\\\Desktop\\\\NextJs InfixMart\\\\.next' -ErrorAction SilentlyContinue; Write-Host 'Cache cleared'\")",
+      "Bash(powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 1; Remove-Item -Recurse -Force 'c:\\\\Users\\\\ashis\\\\OneDrive\\\\Desktop\\\\NextJs InfixMart\\\\.next' -ErrorAction SilentlyContinue; Write-Host 'Done — all node processes killed and cache cleared'\")",
+      "Bash(node app/api/_server/createAdmin.js)",
+      "Bash(ADMIN_EMAIL=infixmarthelp@gmail.com ADMIN_PASSWORD=Shukla@1234 ADMIN_NAME=Admin DB_HOST=127.0.0.1 DB_PORT=3306 DB_NAME=infixmart DB_USER=root DB_PASSWORD= NODE_ENV=development node app/api/_server/createAdmin.js)",
+      "Bash(powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 1; Remove-Item -Recurse -Force 'c:\\\\Users\\\\ashis\\\\OneDrive\\\\Desktop\\\\NextJs InfixMart\\\\.next' -ErrorAction SilentlyContinue; Write-Host 'Done'\")"
     ]
   }
 }
