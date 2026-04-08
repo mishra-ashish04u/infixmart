@@ -37,7 +37,8 @@ export async function callExpressInProcess(request, targetPath) {
     };
     req.socket = { remoteAddress: "127.0.0.1", encrypted: false, destroy() {} };
     req.connection = req.socket;
-    req.ip = request.headers.get("x-forwarded-for") || "127.0.0.1";
+    const forwarded = request.headers.get("x-forwarded-for") || "127.0.0.1";
+    req.ip = String(forwarded).split(",")[0].trim() || "127.0.0.1";
 
     // Push body AFTER Express attaches its listeners
     setImmediate(() => {
