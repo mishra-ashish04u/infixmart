@@ -95,6 +95,9 @@ const nextConfig = {
   // ── Limit build workers (prevents EAGAIN on shared hosting) ─────────────
   experimental: {
     cpus: 1,
+    outputFileTracingIncludes: {
+      "/api/**": ["./node_modules/mysql2/**/*"],
+    },
   },
 
   // ── Compress responses ────────────────────────────────────────────────────

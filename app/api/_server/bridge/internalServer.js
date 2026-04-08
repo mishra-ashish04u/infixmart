@@ -1,5 +1,8 @@
 import http from "http";
 import app, { initializeServer } from "../app.js";
+// Explicit import so Next.js standalone file tracer includes mysql2.
+// Sequelize loads it dynamically (require(dialect)) which the tracer can't detect.
+import "mysql2";
 
 // Use globalThis so the singleton survives Next.js module re-evaluations
 // across hot reloads and multiple worker starts in the same process.
