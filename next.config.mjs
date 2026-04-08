@@ -89,25 +89,9 @@ const nextConfig = {
     return config;
   },
 
-  // ── Standalone output for Hostinger deployment ────────────────────────────
-  output: "standalone",
-
   // ── Limit build workers (prevents EAGAIN on shared hosting) ─────────────
   experimental: {
     cpus: 1,
-    // Explicitly include dynamically-required packages that the standalone
-    // file tracer cannot detect (sequelize loads mysql2 by dialect name).
-    outputFileTracingIncludes: {
-      "/api/**": [
-        "./node_modules/mysql2/**",
-        "./node_modules/sequelize/**",
-        "./node_modules/express/**",
-        "./node_modules/multer/**",
-        "./node_modules/nodemailer/**",
-        "./node_modules/razorpay/**",
-        "./node_modules/sharp/**",
-      ],
-    },
   },
 
   // ── Compress responses ────────────────────────────────────────────────────
