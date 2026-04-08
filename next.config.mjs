@@ -89,6 +89,14 @@ const nextConfig = {
     return config;
   },
 
+  // ── Standalone output for Hostinger deployment ────────────────────────────
+  output: "standalone",
+
+  // ── Limit build workers (prevents EAGAIN on shared hosting) ─────────────
+  experimental: {
+    cpus: 1,
+  },
+
   // ── Compress responses ────────────────────────────────────────────────────
   compress: true,
 

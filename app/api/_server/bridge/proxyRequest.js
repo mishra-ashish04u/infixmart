@@ -1,4 +1,7 @@
 import { getInternalServerBaseUrl } from "./internalServer.js";
+// Use undici directly to bypass Next.js's patched global fetch,
+// which adds caching/deduplication that breaks localhost proxy requests.
+import { fetch as undiciFetch } from "undici";
 
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
 
@@ -38,7 +41,7 @@ export async function proxyLegacyRequest(request, targetPath) {
     init.body = Buffer.from(await request.arrayBuffer());
   }
 
-  const response = await fetch(targetUrl, init);
+  const response = await undiciFetch(targetUrl, init);
 
   return new Response(response.body, {
     status: response.status,
