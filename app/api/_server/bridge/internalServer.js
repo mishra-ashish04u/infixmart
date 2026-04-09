@@ -31,10 +31,12 @@ export async function callExpressInProcess(request, targetPath) {
     const req = new Readable({ read() {} });
     req.method = request.method;
     req.url = targetPath + url.search;
-    req.headers = {
-      ...Object.fromEntries(request.headers.entries()),
-      host: "localhost",
-    };
+    const headers = { ...Object.fromEntries(request.headers.entries()), host: "localhost" };
+    // Strip origin — this is an in-process call, not a real cross-origin request.
+    // Keeping it causes Express CORS to reject requests if FRONTEND_URL env var
+    // doesn't exactly match the browser's origin header.
+    delete headers["origin"];
+    req.headers = headers;
     req.socket = { remoteAddress: "127.0.0.1", encrypted: false, destroy() {} };
     req.connection = req.socket;
     const forwarded = request.headers.get("x-forwarded-for") || "127.0.0.1";
