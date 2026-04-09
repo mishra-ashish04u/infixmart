@@ -3,7 +3,7 @@ import { MdDelete, MdAdd, MdClose, MdEdit, MdCheck, MdKeyboardArrowUp, MdKeyboar
 import adminAxios from "../utils/adminAxios";
 import toast, { Toaster } from "react-hot-toast";
 
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const BASE = import.meta.env.VITE_API_URL || "";
 const imgUrl = (p) => (p ? `${BASE}${p}` : "");
 
 const primaryBtn = { padding: "0.55rem 1.1rem", background: "#1565C0", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 500, fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.35rem" };

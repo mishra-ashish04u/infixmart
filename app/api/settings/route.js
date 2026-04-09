@@ -1,8 +1,13 @@
-import { createLegacyStaticHandlers } from "../_server/bridge/appRouteProxy.js";
+import { handleRouteError, ok } from "../../../lib/server/api/http.js";
+import { getSettingsPublic } from "../../../lib/server/services/settings.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const handlers = createLegacyStaticHandlers("/api/settings");
-
-export const GET = handlers.GET;
+export async function GET() {
+  try {
+    return ok(await getSettingsPublic());
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}

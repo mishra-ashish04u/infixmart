@@ -5,7 +5,7 @@ import adminAxios from "../utils/adminAxios";
 import toast, { Toaster } from "react-hot-toast";
 import { useForm, required, minLength, greaterThan, minVal } from "../../hooks/useForm";
 
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const BASE = import.meta.env.VITE_API_URL || "";
 const imgUrl = (p) => (p ? `${BASE}${p}` : "");
 
 const inputStyle = { width: "100%", padding: "0.6rem 0.875rem", border: "1px solid #ddd", borderRadius: 6, fontSize: "0.9rem", outline: "none", boxSizing: "border-box" };

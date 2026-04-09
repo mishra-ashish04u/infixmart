@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MyContext } from '../LegacyProviders';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
-import { getData } from '../utils/api';
+import { postData } from '../utils/api';
 
 const useLogout = () => {
   const context = useContext(MyContext);
@@ -13,7 +13,7 @@ const useLogout = () => {
 
   return async () => {
     // server-side logout clears httpOnly cookies
-    await getData('/api/user/logout').catch(() => {});
+    await postData('/api/user/logout', {}).catch(() => {});
     context.setIsLogin(false);
     context.setUserData(null);
     clearCart();

@@ -1,14 +1,42 @@
-import { createLegacyProxyHandlers } from "../../_server/bridge/appRouteProxy.js";
+import { handleRouteError, ok } from "../../../../lib/server/api/http.js";
+import { addOption, getOptions, removeOption } from "../../../../lib/server/services/option-lists.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const handlers = createLegacyProxyHandlers("/api/productSize");
+async function parseJson(request) {
+  try {
+    return await request.json();
+  } catch {
+    return {};
+  }
+}
 
-export const GET = handlers.GET;
-export const POST = handlers.POST;
-export const PUT = handlers.PUT;
-export const PATCH = handlers.PATCH;
-export const DELETE = handlers.DELETE;
-export const OPTIONS = handlers.OPTIONS;
-export const HEAD = handlers.HEAD;
+async function handle(request, context) {
+  const params = context?.params ? await context.params : {};
+  const segments = Array.isArray(params.path) ? params.path : [];
+
+  try {
+    const [first] = segments;
+
+    if (request.method === "GET" && segments.length === 0) {
+      return ok(await getOptions("size"));
+    }
+
+    if (request.method === "POST" && first === "create") {
+      return ok(await addOption("size", await parseJson(request)), 201);
+    }
+
+    if (request.method === "DELETE" && first) {
+      return ok(await removeOption("size", first));
+    }
+
+    return ok({ message: "Not found", error: true, success: false }, 404);
+  } catch (error) {
+    return handleRouteError(error);
+  }
+}
+
+export const GET = handle;
+export const POST = handle;
+export const DELETE = handle;

@@ -6,7 +6,7 @@ import TableRowSkeleton from "../../components/skeletons/TableRowSkeleton";
 import EmptyState from "../../components/EmptyState";
 import { MdInventory } from "react-icons/md";
 
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const BASE = import.meta.env.VITE_API_URL || "";
 const imgUrl = (p) => (p ? `${BASE}${p}` : "");
 const inr = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 

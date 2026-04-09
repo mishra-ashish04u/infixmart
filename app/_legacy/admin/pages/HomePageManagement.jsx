@@ -21,7 +21,7 @@ import {
 import adminAxios from "../utils/adminAxios";
 import toast, { Toaster } from "react-hot-toast";
 
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const BASE = import.meta.env.VITE_API_URL || "";
 
 /* ── shared styles ─────────────────────────────────────────────────────────── */
 const btn = (bg, color = "#fff", border) => ({

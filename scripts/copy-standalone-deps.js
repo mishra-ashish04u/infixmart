@@ -1,7 +1,6 @@
-// Copies dynamically-required packages into the standalone output so that
-// Hostinger's deployment (which uses Next.js standalone mode) has access to
-// them at runtime. These packages are loaded by Sequelize via require(dialect)
-// and cannot be detected by Next.js's static file tracer.
+// Copies runtime packages into the standalone output so deployments using
+// Next.js standalone mode still have access to dependencies that may be loaded
+// outside the main traced entrypoint.
 import fs from "fs";
 import path from "path";
 
@@ -15,20 +14,11 @@ if (!fs.existsSync(standaloneModules)) {
 
 const PACKAGES = [
   "mysql2",
-  "sequelize",
-  "express",
-  "multer",
   "nodemailer",
   "razorpay",
   "sharp",
   "bcryptjs",
   "jsonwebtoken",
-  "cookie-parser",
-  "cors",
-  "helmet",
-  "morgan",
-  "express-rate-limit",
-  "express-validator",
 ];
 
 function copyDir(src, dest) {

@@ -88,7 +88,7 @@ export default function AdminLayout({ children }) {
 
   const handleLogout = async () => {
     try {
-      await adminAxios.get("/api/user/logout");
+      await adminAxios.post("/api/user/logout", {});
     } catch {}
     navigate("/admin/login");
   };
