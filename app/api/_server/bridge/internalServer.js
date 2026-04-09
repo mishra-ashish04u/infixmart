@@ -1,12 +1,18 @@
 import { Readable } from "stream";
-import app, { initializeServer } from "../app.js";
 
+// Lazy-loaded — app.js (Express + Sequelize + all deps) is NOT imported at
+// module load time. It is dynamically imported on the first request so that
+// Next.js standalone startup doesn't OOM before logging anything.
 const globalState = globalThis.__infixmartBridge ||
-  (globalThis.__infixmartBridge = { ready: null });
+  (globalThis.__infixmartBridge = { ready: null, app: null });
 
 async function ensureReady() {
   if (!globalState.ready) {
-    globalState.ready = initializeServer().catch((err) => {
+    globalState.ready = (async () => {
+      const mod = await import("../app.js");
+      globalState.app = mod.default;
+      await mod.initializeServer();
+    })().catch((err) => {
       globalState.ready = null;
       throw err;
     });
@@ -21,6 +27,7 @@ async function ensureReady() {
 export async function callExpressInProcess(request, targetPath) {
   await ensureReady();
 
+  const app = globalState.app;
   const url = new URL(request.url);
   const isBodyless = ["GET", "HEAD"].includes(request.method);
   const bodyBuf = isBodyless ? null : Buffer.from(await request.arrayBuffer());
