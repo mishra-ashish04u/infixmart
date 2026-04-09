@@ -1,4 +1,5 @@
 import { Sequelize } from "sequelize";
+import mysql2 from "mysql2";
 import dotenv from "dotenv";
 dotenv.config({ quiet: true });
 
@@ -12,6 +13,7 @@ const sequelize = new Sequelize(
     host:    process.env.DB_HOST || "localhost",
     port:    parseInt(process.env.DB_PORT) || 3306,
     dialect: "mysql",
+    dialectModule: mysql2, // Pass mysql2 directly — avoids Sequelize's dynamic require('mysql2')
     logging: false,
 
     // Connection pool — sized for single-instance Node.js on shared hosting
