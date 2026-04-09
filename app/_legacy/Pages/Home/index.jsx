@@ -1,6 +1,7 @@
+"use client";
 /**
  * Home — InfixMart Enhanced
- * 
+ *
  * Every section is 100% driven by the admin panel via /api/homepage/:section
  * and /api/homepage/section_config. Nothing is hard-coded except loading states.
  */

@@ -1,3 +1,4 @@
+"use client";
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import SEO from '../../components/SEO';

@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import SEO from '../../components/SEO';
 import { Link, useSearchParams } from 'react-router-dom';

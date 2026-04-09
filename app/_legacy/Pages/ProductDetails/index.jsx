@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import SEO from '../../components/SEO';
 import toast from 'react-hot-toast';
