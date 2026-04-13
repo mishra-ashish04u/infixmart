@@ -9,6 +9,7 @@
     "dev": "next dev",
     "build": "next build && node scripts/copy-standalone-deps.js",
     "start": "next start -p ${PORT:-3000}",
+    "start:standalone": "node .next/standalone/server.js",
     "create-admin": "node scripts/create-admin.js",
     "clean": "rm -rf .next"
   },

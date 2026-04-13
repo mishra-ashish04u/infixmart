@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 
 const standaloneModules = path.resolve(".next/standalone/node_modules");
+const standaloneRoot = path.resolve(".next/standalone");
 
 // Skip if not a standalone build
 if (!fs.existsSync(standaloneModules)) {
@@ -23,14 +24,8 @@ const PACKAGES = [
 
 function copyDir(src, dest) {
   if (!fs.existsSync(src)) return;
-  if (fs.existsSync(dest)) return; // already there
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const s = path.join(src, entry.name);
-    const d = path.join(dest, entry.name);
-    if (entry.isDirectory()) copyDir(s, d);
-    else fs.copyFileSync(s, d);
-  }
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.cpSync(src, dest, { recursive: true, force: true });
 }
 
 for (const pkg of PACKAGES) {
@@ -40,4 +35,10 @@ for (const pkg of PACKAGES) {
   console.log(`Copied: ${pkg}`);
 }
 
-console.log("Standalone deps copy complete.");
+copyDir(path.resolve(".next/static"), path.join(standaloneRoot, ".next/static"));
+console.log("Copied: .next/static");
+
+copyDir(path.resolve("public"), path.join(standaloneRoot, "public"));
+console.log("Copied: public");
+
+console.log("Standalone assets and deps copy complete.");
