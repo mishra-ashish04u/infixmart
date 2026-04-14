@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import adminAxios from "../utils/adminAxios";
 import toast, { Toaster } from "react-hot-toast";

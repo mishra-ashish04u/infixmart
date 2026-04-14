@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { MdAdd, MdEdit, MdDelete, MdClose, MdLocalOffer } from "react-icons/md";
 import adminAxios from "../utils/adminAxios";

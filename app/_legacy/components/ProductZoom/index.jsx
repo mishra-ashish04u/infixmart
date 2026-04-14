@@ -1,8 +1,8 @@
+"use client";
+
 import React, { useRef, useState } from 'react';
 import InnerImageZoom from 'react-inner-image-zoom';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import 'swiper/css';
-import 'swiper/css/navigation';
 import { Navigation } from 'swiper/modules';
 import { imgUrl } from '../../utils/imageUrl';
 

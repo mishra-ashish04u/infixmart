@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * HeroSlider — clean, full-bleed image slider
  *

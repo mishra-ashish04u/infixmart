@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from 'react';
 import adminAxios from '../utils/adminAxios';
 import { imgUrl } from '../../utils/imageUrl';

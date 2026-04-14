@@ -128,8 +128,6 @@ const nextConfig = {
     return config;
   },
 
-  output: "standalone",
-
   outputFileTracingIncludes: {
     "/api/**": ["./node_modules/mysql2/**/*"],
   },

@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import NextImage from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';

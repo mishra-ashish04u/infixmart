@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useRef } from 'react';
 import { IoClose } from 'react-icons/io5';
 import { MdPrint, MdDownload } from 'react-icons/md';

@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useContext, useState, useEffect, useRef } from "react";
 import OtpBox from "../../components/OtpBox";
 import { Button, CircularProgress } from "@mui/material";

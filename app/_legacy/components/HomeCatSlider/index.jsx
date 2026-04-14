@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * HomeCatSlider — horizontal category row with hexagonal icon shapes
  * Matches triple.co.id's category section (flat-top hexagons, blue theme)

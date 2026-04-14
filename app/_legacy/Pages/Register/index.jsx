@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useContext, useState } from "react";
 import TextField from "@mui/material/TextField";
 import { Button, CircularProgress } from "@mui/material";

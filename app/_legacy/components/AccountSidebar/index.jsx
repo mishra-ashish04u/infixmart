@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useContext, useEffect, useState } from "react";
 import { Button } from "@mui/material";
 import { RiFolderUploadFill } from "react-icons/ri";

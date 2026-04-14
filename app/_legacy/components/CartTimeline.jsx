@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import useStoreSettings from '../hooks/useStoreSettings';

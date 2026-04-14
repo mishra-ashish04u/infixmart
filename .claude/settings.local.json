@@ -28,7 +28,13 @@
       "Bash(node -e \"const bcrypt = require\\('bcryptjs'\\); bcrypt.compare\\('Shukla@1234', '\\\\$2b\\\\$10\\\\$8uJYlKaohABBwYKA1W.EpeCKIvRr9bGj3J1bVyTQevvfwz2Mt8.3i'\\).then\\(r => console.log\\('Match:', r\\)\\)\")",
       "Bash(del \"c:\\\\Users\\\\ashis\\\\OneDrive\\\\Desktop\\\\NextJs InfixMart\\\\public\\\\robots.txt\")",
       "Bash(grep -n \"findProductBySlug\\\\|findPublishedBlogBySlug\" lib/server/repositories/*.js)",
-      "Bash(node scripts/fix-legacy-imports.mjs)"
+      "Bash(node scripts/fix-legacy-imports.mjs)",
+      "Bash(node scripts/check-use-client.mjs)",
+      "Bash(node scripts/add-use-client.mjs)",
+      "Bash(timeout 30 node -e \"import\\('./next.config.mjs'\\).then\\(m => { console.log\\('Config loaded OK'\\); console.log\\(JSON.stringify\\(Object.keys\\(m.default\\), null, 2\\)\\); }\\).catch\\(e => console.error\\('Config error:', e.message\\)\\)\")",
+      "Bash(attrib +P \"c:/Users/ashis/OneDrive/Desktop/NextJs InfixMart/.next\" /D)",
+      "Bash(powershell -Command \"attrib +P '.next' /D /S\")",
+      "Bash(NEXT_TELEMETRY_DISABLED=1 npm run build)"
     ]
   }
 }

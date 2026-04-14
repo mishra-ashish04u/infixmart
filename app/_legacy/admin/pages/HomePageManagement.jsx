@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Admin — Home Page Management
  *

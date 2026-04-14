@@ -15,7 +15,9 @@ import "./_legacy/components/sideBar/style.css";
 
 // ── Third-party CSS ──────────────────────────────────────────────────────────
 import "react-inner-image-zoom/lib/styles.min.css";
-import "../node_modules/react-range-slider-input/dist/style.css";
+import "./vendor/react-range-slider-input.css";
+import "swiper/css";
+import "swiper/css/navigation";
 
 import LegacyProviders from "./_legacy/LegacyProviders.jsx";
 

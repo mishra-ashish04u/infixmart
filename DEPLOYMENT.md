@@ -62,6 +62,8 @@ npm run build
 npm start
 ```
 
+Do not commit `.next/` from your local machine. Let Hostinger build the app from source on the server so the generated chunks, CSS files, and manifests match the production environment.
+
 ---
 
 ## Step 5 — Add Environment Variables

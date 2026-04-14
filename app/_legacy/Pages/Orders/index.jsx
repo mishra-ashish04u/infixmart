@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from 'react';
 import AccountSidebar from '../../components/AccountSidebar';
 import { LuClipboardCheck } from 'react-icons/lu';
