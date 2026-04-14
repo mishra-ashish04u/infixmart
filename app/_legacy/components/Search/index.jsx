@@ -103,8 +103,13 @@ const Search = () => {
             className="h-full px-3 text-[12px] text-gray-600 bg-gray-50 border-r border-gray-200 focus:outline-none cursor-pointer min-w-[120px] max-w-[150px]"
           >
             <option value="">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            {categories.map((cat, index) => (
+              <option
+                key={cat.id ?? cat._id ?? cat.slug ?? cat.name ?? `search-category-${index}`}
+                value={cat.id}
+              >
+                {cat.name}
+              </option>
             ))}
           </select>
 
@@ -172,11 +177,11 @@ const Search = () => {
                   <p className="px-4 pt-3 pb-1 text-[11px] text-gray-400 font-[600] uppercase tracking-wide">
                     Suggestions
                   </p>
-                  {suggestions.map((item) => {
+                  {suggestions.map((item, index) => {
                     const images = Array.isArray(item.images) ? item.images : [];
                     return (
                       <button
-                        key={item.id}
+                        key={item.id ?? item._id ?? item.slug ?? item.name ?? `suggestion-${index}`}
                         onClick={() => handleSuggestionClick(item)}
                         className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#f0f5ff] transition-colors text-left"
                       >

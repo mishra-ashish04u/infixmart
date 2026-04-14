@@ -103,9 +103,9 @@ const Navigation = () => {
                 aria-label='Categories'
                 className='absolute top-full left-0 bg-white shadow-2xl border border-gray-100 rounded-b-2xl z-50 min-w-[220px] py-2'
               >
-                {categories.map((cat) => (
+                {categories.map((cat, index) => (
                   <button
-                    key={cat.id}
+                    key={cat.id ?? cat._id ?? cat.slug ?? cat.name ?? `category-${index}`}
                     role='option'
                     onClick={() => { router.push(`/productListing?category=${cat.id}`); closeAll(); }}
                     className='w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-[#EEF4FF] hover:text-[#1565C0] transition-colors text-left'
@@ -175,7 +175,7 @@ const Navigation = () => {
               >
                 {PRICE_RANGES.map((r, i) => (
                   <button
-                    key={i}
+                    key={r.label}
                     role='option'
                     onClick={() => {
                       const params = new URLSearchParams();
@@ -194,9 +194,9 @@ const Navigation = () => {
           </div>
 
           {/* Category quick links */}
-          {categories.slice(0, 4).map((cat) => (
+          {categories.slice(0, 4).map((cat, index) => (
             <button
-              key={cat.id}
+              key={cat.id ?? cat._id ?? cat.slug ?? cat.name ?? `quick-category-${index}`}
               onClick={() => router.push(`/productListing?category=${cat.id}`)}
               className='flex-shrink-0 px-3.5 py-3 text-[13px] font-[500] text-white/80 hover:text-white border-b-2 border-transparent hover:border-white/30 transition-colors whitespace-nowrap'
             >

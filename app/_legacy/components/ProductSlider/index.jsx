@@ -44,8 +44,8 @@ const ProductSlider = ({ items = 6, products }) => {
           ? displayItems.map((_, i) => (
               <SwiperSlide key={i}><SkeletonCard /></SwiperSlide>
             ))
-          : displayItems.map((product) => (
-              <SwiperSlide key={product.id}>
+          : displayItems.map((product, index) => (
+              <SwiperSlide key={product.id ?? product._id ?? product.slug ?? product.name ?? `product-slide-${index}`}>
                 <ProductItem item={product} />
               </SwiperSlide>
             ))

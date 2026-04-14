@@ -64,6 +64,8 @@ npm start
 
 Do not commit `.next/` from your local machine. Let Hostinger build the app from source on the server so the generated chunks, CSS files, and manifests match the production environment.
 
+Do not keep a static-hosting fallback file like `public/_redirects` with `/* /index.html 200` in this project. That rule is for SPA/static hosting and can break Next.js asset requests such as `/_next/static/...` on platforms that honor it.
+
 ---
 
 ## Step 5 — Add Environment Variables

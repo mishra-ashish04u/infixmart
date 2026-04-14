@@ -4,6 +4,7 @@ const reactRouterCompatPath = fileURLToPath(
   new URL("./app/_legacy/compat/react-router-dom.js", import.meta.url)
 );
 const isProduction = process.env.NODE_ENV === "production";
+const distDir = isProduction ? ".next" : ".next-dev";
 const contentSecurityPolicy =
   process.env.CONTENT_SECURITY_POLICY ||
   (isProduction
@@ -51,6 +52,8 @@ const baseSecurityHeaders = [
 ];
 
 const nextConfig = {
+  distDir,
+
   serverExternalPackages: [
     "mysql2",
     "sharp",

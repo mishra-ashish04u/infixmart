@@ -106,7 +106,7 @@ export default function RootLayout({ children }) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         {/* #page-wrapper clips horizontal overflow WITHOUT breaking position:sticky */}
         <div id="page-wrapper">
           <LegacyProviders>{children}</LegacyProviders>

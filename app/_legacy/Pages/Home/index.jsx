@@ -107,7 +107,7 @@ const CategoryGrid = () => {
           {display.map((cat, i) => {
             const p = CAT_PALETTES[i % CAT_PALETTES.length];
             return cat ? (
-              <button key={cat.id} onClick={() => router.push(`/productListing?category=${cat.id}`)}
+              <button key={cat.id ?? cat._id ?? cat.slug ?? cat.name ?? `home-category-${i}`} onClick={() => router.push(`/productListing?category=${cat.id}`)}
                 className='group relative flex flex-col items-center justify-center gap-4 p-6 rounded-3xl hover:shadow-xl hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden border border-transparent'
                 style={{ background: `linear-gradient(135deg, ${p.bg} 0%, #ffffff 100%)`, borderColor: p.bg }}
               >
@@ -127,7 +127,7 @@ const CategoryGrid = () => {
           {display.slice(0, 8).map((cat, i) => {
             const p = CAT_PALETTES[i % CAT_PALETTES.length];
             return cat ? (
-              <button key={cat.id} onClick={() => router.push(`/productListing?category=${cat.id}`)}
+              <button key={cat.id ?? cat._id ?? cat.slug ?? cat.name ?? `home-mobile-category-${i}`} onClick={() => router.push(`/productListing?category=${cat.id}`)}
                 className='flex flex-col items-center gap-2 p-3 rounded-2xl cursor-pointer active:scale-95 transition-transform'
                 style={{ background: p.bg }}
               >
@@ -158,11 +158,11 @@ const ShopByPrice = ({ items }) => {
       <div className='container'>
         <SectionHead tag='Best Value' title='Find Your Perfect' accent='Deal' sub='Shop smarter — filter exactly by your budget' />
         <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6'>
-          {items.map((tier) => {
+          {items.map((tier, index) => {
             const meta = parseMeta(tier);
             return (
               <button
-                key={tier.id}
+                key={tier.id ?? tier._id ?? tier.slug ?? tier.title ?? `price-tier-${index}`}
                 onClick={() => {
                   const params = new URLSearchParams();
                   if (meta.maxPrice) params.set('maxPrice', meta.maxPrice);
@@ -207,7 +207,11 @@ const TodaysBestDeals = ({ products }) => (
           breakpoints={{ 480: { slidesPerView: 2 }, 640: { slidesPerView: 3 }, 900: { slidesPerView: 4 }, 1200: { slidesPerView: 5 } }}
           className="pb-4"
         >
-          {products.map((p) => <SwiperSlide key={p.id} className="pt-2"><ProductItem item={p} /></SwiperSlide>)}
+          {products.map((p, index) => (
+            <SwiperSlide key={p.id ?? p._id ?? p.slug ?? p.name ?? `deal-product-${index}`} className="pt-2">
+              <ProductItem item={p} />
+            </SwiperSlide>
+          ))}
         </Swiper>
       )}
       <div className='flex justify-center mt-8'>
@@ -285,8 +289,8 @@ const ShopByCollection = ({ items }) => {
           />
         ) : (
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'>
-          {items.map((col) => (
-            <Link key={col.id} href={col.link || '/productListing'} className='group relative overflow-hidden rounded-3xl h-[280px] sm:h-[320px] shadow-sm hover:shadow-2xl transition-all duration-500 block'>
+          {items.map((col, index) => (
+            <Link key={col.id ?? col._id ?? col.slug ?? col.title ?? `collection-${index}`} href={col.link || '/productListing'} className='group relative overflow-hidden rounded-3xl h-[280px] sm:h-[320px] shadow-sm hover:shadow-2xl transition-all duration-500 block'>
               <img src={col.image} alt={col.title} className='w-full h-full object-cover transition-transform duration-700 group-hover:scale-110' />
               <div className='absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent' />
               {col.badge && (
@@ -329,11 +333,11 @@ const WhyChooseUs = ({ items }) => {
           />
         ) : (
         <div className='grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8'>
-          {items.map((w) => {
+          {items.map((w, index) => {
             const meta = parseMeta(w);
             const icon = ICON_MAP[meta.icon] || <BsBoxSeam className='text-[2rem]' />;
             return (
-              <div key={w.id} className='group flex flex-col items-center text-center p-8 bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_40px_rgba(0,0,0,0.08)] hover:-translate-y-2 transition-all duration-300 border border-slate-100'>
+              <div key={w.id ?? w._id ?? w.slug ?? w.title ?? `why-${index}`} className='group flex flex-col items-center text-center p-8 bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_40px_rgba(0,0,0,0.08)] hover:-translate-y-2 transition-all duration-300 border border-slate-100'>
                 <div className='w-20 h-20 rounded-full flex items-center justify-center mb-6 transition-transform duration-500 group-hover:scale-110 shadow-inner'
                   style={{ background: w.bgColor, color: w.textColor }}>
                   {icon}
@@ -363,11 +367,11 @@ const StatsBar = ({ items }) => {
           />
         ) : (
         <div className='grid grid-cols-2 md:grid-cols-4 gap-8'>
-          {items.map((s) => {
+          {items.map((s, index) => {
             const meta = parseMeta(s);
             const icon = ICON_MAP[meta.icon] || <BsBoxSeam className='text-[2rem] text-sky-400' />;
             return (
-              <div key={s.id} className='flex flex-col items-center text-center group'>
+              <div key={s.id ?? s._id ?? s.slug ?? s.title ?? `stat-${index}`} className='flex flex-col items-center text-center group'>
                 <div className='w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-[0_0_20px_rgba(56,189,248,0.2)]'>
                   {icon}
                 </div>
@@ -399,7 +403,11 @@ const BlogSection = ({ blogs }) => {
             breakpoints={{ 640: { slidesPerView: 2 }, 1024: { slidesPerView: 3 } }}
             className="pb-6"
           >
-            {blogs.map((blog, i) => <SwiperSlide key={blog?.id || i} className="pt-2"><BlogItem blog={blog} /></SwiperSlide>)}
+            {blogs.map((blog, i) => (
+              <SwiperSlide key={blog?.id ?? blog?.slug ?? blog?.title ?? `blog-${i}`} className="pt-2">
+                <BlogItem blog={blog} />
+              </SwiperSlide>
+            ))}
           </Swiper>
         )}
       </div>

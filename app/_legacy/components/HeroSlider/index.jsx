@@ -65,7 +65,7 @@ const HeroSlider = () => {
             className='hero-swiper'
           >
             {slides.map((slide, i) => (
-              <SwiperSlide key={i}>
+              <SwiperSlide key={slide.src || slide.alt || `hero-slide-${i}`}>
                 <Link href={slide.link} className='block w-full h-full'>
                   <img
                     src={slide.src}
