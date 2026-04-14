@@ -1,3 +1,11 @@
+# Disable LiteSpeed Cache completely to prevent it from corrupting Next.js JS/CSS bundles
+<IfModule LiteSpeed>
+  CacheDisable public /
+  CacheDisable private /
+  RewriteEngine On
+  RewriteRule .* - [E=Cache-Control:no-cache]
+</IfModule>
+
 # Force correct MIME types for Next.js static assets
 <IfModule mod_mime.c>
   AddType application/javascript .js .mjs
