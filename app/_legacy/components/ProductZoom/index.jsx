@@ -1,20 +1,22 @@
 "use client";
 
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import InnerImageZoom from 'react-inner-image-zoom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
 import { imgUrl } from '../../utils/imageUrl';
 
 const ProductZoom = ({ images = [] }) => {
   const [slideIndex, setSlideIndex] = useState(0);
-  const zoomSliderBig = useRef();
-  const zoomSliderSmall = useRef();
+  const [swiperSmall, setSwiperSmall] = useState(null);
+  const [swiperBig, setSwiperBig] = useState(null);
 
   const goto = (index) => {
     setSlideIndex(index);
-    zoomSliderSmall.current?.swiper.slideTo(index);
-    zoomSliderBig.current?.swiper.slideTo(index);
+    swiperSmall?.slideTo(index);
+    swiperBig?.slideTo(index);
   };
 
   // Fallback if no images provided
@@ -25,7 +27,7 @@ const ProductZoom = ({ images = [] }) => {
       {/* Thumbnail strip */}
       <div className='slider w-[15%]'>
         <Swiper
-          ref={zoomSliderSmall}
+          onSwiper={setSwiperSmall}
           direction={'vertical'}
           slidesPerView={4}
           spaceBetween={10}
@@ -52,7 +54,7 @@ const ProductZoom = ({ images = [] }) => {
 
       {/* Main zoom */}
       <div className='zoomContainer rounded-md w-[85%] h-[500px] overflow-hidden'>
-        <Swiper ref={zoomSliderBig} slidesPerView={1} spaceBetween={0} navigation={false}>
+        <Swiper onSwiper={setSwiperBig} slidesPerView={1} spaceBetween={0} navigation={false}>
           {displayImages.map((img, i) => (
             <SwiperSlide key={i}>
               {img ? (
