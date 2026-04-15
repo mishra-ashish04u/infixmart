@@ -3,15 +3,10 @@ import axios from 'axios';
 const BASE_URL =
   "" ||
   (typeof window !== 'undefined' ? window.location.origin : '');
-const GUEST_OPTIONAL_PATHS = [
-  '/api/user/user-details',
-  '/api/cart',
-  '/api/mylist',
-  '/api/user/refresh-token',
-];
-
-const shouldSkipRefresh = (url = '') =>
-  GUEST_OPTIONAL_PATHS.some((path) => url === path || url.startsWith(`${path}/`));
+// Only skip refresh for the refresh-token endpoint itself to prevent infinite loops.
+// All other 401s should attempt a token refresh so logged-in users with expired
+// access tokens are not incorrectly treated as guests.
+const shouldSkipRefresh = (url = '') => url === '/api/user/refresh-token';
 
 // OWASP A02/A07: withCredentials sends httpOnly cookies automatically.
 // Tokens are NEVER stored in localStorage — prevents XSS token theft.

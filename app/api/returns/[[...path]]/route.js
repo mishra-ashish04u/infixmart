@@ -22,6 +22,7 @@ async function parseJson(request) {
 async function requireAdminRequest(request) {
   const userId = requireAccessUserId(request);
   await requireAdmin(userId);
+  return userId;
 }
 
 async function dispatchNativeRoute(request, segments) {

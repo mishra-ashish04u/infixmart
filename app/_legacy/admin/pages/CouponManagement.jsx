@@ -13,6 +13,7 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-IN", { day: "2-di
 const EMPTY_FORM = {
   code: "", description: "", type: "percent", value: "",
   minOrderValue: "", maxDiscount: "", usageLimit: "", isActive: true, expiresAt: "",
+  restrictionType: "none", restrictedEmail: "",
 };
 
 function Modal({ title, onClose, children }) {
@@ -72,6 +73,8 @@ export default function CouponManagement() {
       usageLimit: c.usageLimit ?? "",
       isActive: c.isActive,
       expiresAt: c.expiresAt ? c.expiresAt.split("T")[0] : "",
+      restrictionType: c.restrictionType || "none",
+      restrictedEmail: c.restrictedEmail || "",
     });
     setFormError("");
     setModal(true);
@@ -82,6 +85,7 @@ export default function CouponManagement() {
     if (!form.code.trim()) { setFormError("Coupon code is required"); return; }
     if (!form.value || isNaN(form.value) || Number(form.value) <= 0) { setFormError("Value must be a positive number"); return; }
     if (form.type === "percent" && Number(form.value) > 100) { setFormError("Percent discount cannot exceed 100%"); return; }
+    if (form.restrictionType === "email" && !form.restrictedEmail.trim()) { setFormError("Email address is required for email-restricted coupons"); return; }
 
     setSaving(true);
     setFormError("");
@@ -95,6 +99,8 @@ export default function CouponManagement() {
       usageLimit: form.usageLimit !== "" ? Number(form.usageLimit) : null,
       isActive: form.isActive,
       expiresAt: form.expiresAt || null,
+      restrictionType: form.restrictionType || "none",
+      restrictedEmail: form.restrictionType === "email" ? form.restrictedEmail.trim().toLowerCase() : null,
     };
 
     try {
@@ -156,7 +162,7 @@ export default function CouponManagement() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
             <thead>
               <tr style={{ background: "#F9FAFB" }}>
-                {["Code", "Type", "Value", "Min Order", "Max Disc.", "Uses", "Expires", "Status", "Actions"].map((h) => (
+                {["Code", "Type", "Value", "Min Order", "Max Disc.", "Uses", "Expires", "Restriction", "Status", "Actions"].map((h) => (
                   <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#555", borderBottom: "1px solid #E0E0E0", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
@@ -167,7 +173,7 @@ export default function CouponManagement() {
                 : coupons.length === 0
                 ? (
                   <tr>
-                    <td colSpan={9}>
+                    <td colSpan={10}>
                       <EmptyState icon={<MdLocalOffer style={{ fontSize: 64 }} />} title="No coupons yet" subtitle="Create your first coupon to offer discounts." />
                     </td>
                   </tr>
@@ -185,6 +191,21 @@ export default function CouponManagement() {
                       {c.usageCount ?? 0}{c.usageLimit ? ` / ${c.usageLimit}` : ""}
                     </td>
                     <td style={{ padding: "0.75rem 1rem", color: "#555", whiteSpace: "nowrap" }}>{fmtDate(c.expiresAt)}</td>
+                    <td style={{ padding: "0.75rem 1rem" }}>
+                      {c.restrictionType === "first_order" && (
+                        <span style={{ padding: "0.2rem 0.6rem", borderRadius: 999, fontSize: "0.73rem", fontWeight: 600, background: "#FFF8E1", color: "#F57F17", whiteSpace: "nowrap" }}>
+                          First Order
+                        </span>
+                      )}
+                      {c.restrictionType === "email" && (
+                        <span title={c.restrictedEmail} style={{ padding: "0.2rem 0.6rem", borderRadius: 999, fontSize: "0.73rem", fontWeight: 600, background: "#EDE7F6", color: "#6A1B9A", whiteSpace: "nowrap", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", display: "inline-block" }}>
+                          {c.restrictedEmail || "Email"}
+                        </span>
+                      )}
+                      {(!c.restrictionType || c.restrictionType === "none") && (
+                        <span style={{ color: "#aaa", fontSize: "0.75rem" }}>Everyone</span>
+                      )}
+                    </td>
                     <td style={{ padding: "0.75rem 1rem" }}>
                       <span style={{ padding: "0.2rem 0.6rem", borderRadius: 999, fontSize: "0.73rem", fontWeight: 600, background: c.isActive ? "#E8F5E9" : "#F5F5F5", color: c.isActive ? "#00A651" : "#999" }}>
                         {c.isActive ? "Active" : "Inactive"}
@@ -252,6 +273,27 @@ export default function CouponManagement() {
                 <input style={inp} type="date" value={form.expiresAt} onChange={(e) => set("expiresAt", e.target.value)} />
               </div>
             </div>
+            {/* Restriction */}
+            <div style={row}>
+              <label style={lbl}>Who Can Use This Coupon</label>
+              <select style={inp} value={form.restrictionType} onChange={(e) => set("restrictionType", e.target.value)}>
+                <option value="none">Everyone (General)</option>
+                <option value="first_order">First-Time Buyers Only</option>
+                <option value="email">Specific Email Only</option>
+              </select>
+            </div>
+            {form.restrictionType === "email" && (
+              <div style={row}>
+                <label style={lbl}>Restricted Email *</label>
+                <input
+                  style={inp}
+                  type="email"
+                  value={form.restrictedEmail}
+                  onChange={(e) => set("restrictedEmail", e.target.value)}
+                  placeholder="customer@gmail.com"
+                />
+              </div>
+            )}
             <div style={{ ...row, display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <input type="checkbox" id="isActive" checked={form.isActive} onChange={(e) => set("isActive", e.target.checked)} style={{ width: 16, height: 16, cursor: "pointer" }} />
               <label htmlFor="isActive" style={{ fontSize: "0.875rem", color: "#333", cursor: "pointer" }}>Active</label>

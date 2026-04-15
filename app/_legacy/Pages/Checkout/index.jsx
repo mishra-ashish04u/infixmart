@@ -495,7 +495,17 @@ const Checkout = () => {
 
       <div className="space-y-3 mb-5">
         {cartItems.map((item) => {
-          const product = item.productId || {};
+          const product = item.productId;
+          if (!product) {
+            return (
+              <div key={item.id} className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-lg opacity-60">
+                <div className="w-[60px] h-[60px] rounded-md bg-gray-100 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] text-gray-400 italic">Product no longer available</p>
+                </div>
+              </div>
+            );
+          }
           const images = Array.isArray(product.images) ? product.images : [];
           const lineTotal = (product.price || 0) * (item.quantity || 1);
           return (
