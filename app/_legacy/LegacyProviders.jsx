@@ -88,6 +88,32 @@ function LegacyProviders({ children }) {
             <CartProvider enabled={isLogin}>
               <WishlistProvider enabled={isLogin}>
                 <RecentlyViewedProvider>{children}</RecentlyViewedProvider>
+                <Dialog
+                  open={openProductDetailsModal}
+                  fullWidth={fullWidth}
+                  maxWidth={maxWidth}
+                  onClose={handleCloseProductDetailsModal}
+                  aria-labelledby="alert-dialog-title"
+                  aria-describedby="alert-dialog-description"
+                  className="productDetailModal"
+                >
+                  <DialogContent>
+                    <div className="relative flex items-center w-full productDetailModalContainer">
+                      <Button
+                        className="!w-[40px] !min-w-[40px] !h-[40px] !rounded-full !text-[#000] !font-bold !absolute top-[15px] right-[15px] !bg-[#f1f1f1]"
+                        onClick={handleCloseProductDetailsModal}
+                      >
+                        <IoClose className="text-[20px]" />
+                      </Button>
+                      <div className="col1 w-[40%] px-3">
+                        <ProductZoom images={selectedQuickViewProduct?.images || []} />
+                      </div>
+                      <div className="col2 w-[60%] px-8 pr-16 py-8 productContent">
+                        <ProductDetailsComponent product={selectedQuickViewProduct} />
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </WishlistProvider>
             </CartProvider>
           </SettingsProvider>
@@ -95,33 +121,6 @@ function LegacyProviders({ children }) {
       </GoogleOAuthProvider>
 
       <Toaster />
-
-      <Dialog
-        open={openProductDetailsModal}
-        fullWidth={fullWidth}
-        maxWidth={maxWidth}
-        onClose={handleCloseProductDetailsModal}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-        className="productDetailModal"
-      >
-        <DialogContent>
-          <div className="relative flex items-center w-full productDetailModalContainer">
-            <Button
-              className="!w-[40px] !min-w-[40px] !h-[40px] !rounded-full !text-[#000] !font-bold !absolute top-[15px] right-[15px] !bg-[#f1f1f1]"
-              onClick={handleCloseProductDetailsModal}
-            >
-              <IoClose className="text-[20px]" />
-            </Button>
-            <div className="col1 w-[40%] px-3">
-              <ProductZoom images={selectedQuickViewProduct?.images || []} />
-            </div>
-            <div className="col2 w-[60%] px-8 pr-16 py-8 productContent">
-              <ProductDetailsComponent product={selectedQuickViewProduct} />
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

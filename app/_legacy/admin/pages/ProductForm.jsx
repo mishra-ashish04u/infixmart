@@ -74,6 +74,7 @@ export default function ProductForm() {
     name: "",
     description: "",
     brand: "",
+    sku: "",
     catName: "",
     catId: "",
     price: "",
@@ -106,6 +107,7 @@ export default function ProductForm() {
           name: p.name || "",
           description: p.description || "",
           brand: p.brand || "",
+          sku: p.sku || "",
           catName: p.catName || "",
           catId: p.catId ? String(p.catId) : "",
           price: p.price ?? "",
@@ -264,6 +266,7 @@ export default function ProductForm() {
         name: form.name.trim(),
         description: form.description.trim(),
         brand: form.brand.trim() || null,
+        sku: form.sku.trim() || null,
         catName: form.catName || null,
         catId: form.catId || null,
         price: Number(form.price) || 0,
@@ -329,6 +332,10 @@ export default function ProductForm() {
             <div>
               <label style={labelStyle}>Brand</label>
               <input style={inputStyle} value={form.brand} onChange={set("brand")} placeholder="e.g. Sony" />
+            </div>
+            <div>
+              <label style={labelStyle}>SKU</label>
+              <input style={inputStyle} value={form.sku} onChange={set("sku")} placeholder="e.g. WE-BLK-001" />
             </div>
           </div>
           <label style={labelStyle}>Description</label>
