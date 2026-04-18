@@ -82,8 +82,8 @@ const Header = () => {
     <header className='w-full sticky top-0 z-40'>
 
       {/* ── 1. Announcement Ticker ── */}
-      <div className='bg-[#1565C0] text-white overflow-hidden py-1.5 hidden sm:block'>
-        <div className='ticker-track text-[12px] font-[500] tracking-wide'>
+      <div className='bg-[#1565C0] text-white overflow-hidden py-1.5'>
+        <div className='ticker-track text-[10px] sm:text-[12px] font-[500] tracking-wide'>
           {tickerText}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{tickerText}
         </div>
       </div>

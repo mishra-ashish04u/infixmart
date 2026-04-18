@@ -19,6 +19,7 @@ import {
   MdLocalOffer,
   MdMenu,
   MdClose,
+  MdRemoveShoppingCart,
 } from "react-icons/md";
 import adminAxios from "./utils/adminAxios";
 
@@ -32,9 +33,10 @@ const NAV_ITEMS = [
   { path: "/admin/homepage",    label: "Home Page",   icon: <MdHome /> },
   { path: "/admin/attributes",  label: "Attributes",  icon: <MdTune /> },
   { path: "/admin/blogs",       label: "Blogs",       icon: <MdArticle /> },
-  { path: "/admin/coupons",     label: "Coupons",     icon: <MdLocalOffer /> },
-  { path: "/admin/returns",     label: "Returns",     icon: <MdAssignmentReturn /> },
-  { path: "/admin/settings",    label: "Settings",    icon: <MdSettings /> },
+  { path: "/admin/coupons",         label: "Coupons",         icon: <MdLocalOffer /> },
+  { path: "/admin/returns",         label: "Returns",         icon: <MdAssignmentReturn /> },
+  { path: "/admin/abandoned-carts", label: "Abandoned Carts", icon: <MdRemoveShoppingCart /> },
+  { path: "/admin/settings",        label: "Settings",        icon: <MdSettings /> },
 ];
 
 const ROUTE_TITLES = {
@@ -50,7 +52,8 @@ const ROUTE_TITLES = {
   "/admin/blogs":      "Blog Management",
   "/admin/coupons":    "Coupon Management",
   "/admin/returns":    "Return Requests",
-  "/admin/settings":   "Store Settings",
+  "/admin/abandoned-carts": "Abandoned Carts",
+  "/admin/settings":        "Store Settings",
 };
 
 const SIDEBAR_W = 240;

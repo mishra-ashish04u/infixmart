@@ -9,6 +9,7 @@ import DialogContent from "@mui/material/DialogContent";
 import { IoClose } from "react-icons/io5";
 import ProductZoom from "./components/ProductZoom";
 import ProductDetailsComponent from "./components/ProductDetails";
+import MembershipModal from "./components/MembershipModal";
 import { getData } from "./utils/api";
 import { CartProvider } from "./context/CartContext";
 import { WishlistProvider } from "./context/WishlistContext";
@@ -26,6 +27,7 @@ function LegacyProviders({ children }) {
   const [userData, setUserData] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [openCartPanel, setOpenCartPanel] = useState(false);
+  const [showMembershipModal, setShowMembershipModal] = useState(false);
 
   useEffect(() => {
     getData("/api/user/user-details")
@@ -59,6 +61,20 @@ function LegacyProviders({ children }) {
     setOpenCartPanel(newOpen);
   };
 
+  const openMembershipModal = () => setShowMembershipModal(true);
+  const closeMembershipModal = () => setShowMembershipModal(false);
+
+  const refreshUserData = () => {
+    getData("/api/user/user-details")
+      .then((res) => {
+        if (res && res.error === false) {
+          setUserData(res.user);
+          setIsLogin(true);
+        }
+      })
+      .catch(() => {});
+  };
+
   const openAlertBox = (status, msg) => {
     if (status === "success") toast.success(msg);
     if (status === "error") toast.error(msg);
@@ -78,6 +94,8 @@ function LegacyProviders({ children }) {
     setUserData,
     userData,
     authLoading,
+    openMembershipModal,
+    closeMembershipModal,
   };
 
   return (
@@ -120,6 +138,13 @@ function LegacyProviders({ children }) {
         </MyContext.Provider>
       </GoogleOAuthProvider>
 
+      <MembershipModal
+        open={showMembershipModal}
+        onClose={closeMembershipModal}
+        userEmail={userData?.email}
+        userName={userData?.name}
+        onSuccess={refreshUserData}
+      />
       <Toaster />
     </>
   );

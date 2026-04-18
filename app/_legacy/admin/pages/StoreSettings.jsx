@@ -110,9 +110,15 @@ const StoreSettings = () => {
   const [gst, setGst]             = useState('18');
   const [savingGst, setSavingGst] = useState(false);
 
-  // Section 3 — Membership
-  const [monthly, setMonthly]     = useState('99');
-  const [yearly, setYearly]       = useState('799');
+  // Section 3 — InfixPass Membership
+  const [memEnabled, setMemEnabled]   = useState(true);
+  const [memPrice, setMemPrice]       = useState('49');
+  const [memBenefits, setMemBenefits] = useState([
+    { icon: 'cart',    title: 'Shop from just ₹499',          subtitle: 'Half the usual ₹999 minimum — always'  },
+    { icon: 'truck',   title: 'Free Delivery on Every Order',  subtitle: 'Zero shipping charges, forever'         },
+    { icon: 'zap',     title: 'Priority Fast Delivery',        subtitle: 'Your orders are dispatched first'       },
+    { icon: 'headset', title: 'Dedicated Customer Support',    subtitle: 'Skip the queue — member-only care'      },
+  ]);
   const [savingMem, setSavingMem] = useState(false);
 
   // Section 4 — Cart Timeline
@@ -127,8 +133,12 @@ const StoreSettings = () => {
       if (s.min_order_value)          setMinOrder(s.min_order_value);
       if (s.cod_enabled !== undefined) setCodOn(s.cod_enabled !== 'false');
       if (s.gst_percent)              setGst(s.gst_percent);
-      if (s.membership_price_monthly) setMonthly(s.membership_price_monthly);
-      if (s.membership_price_yearly)  setYearly(s.membership_price_yearly);
+      if (s.membership_price)    setMemPrice(s.membership_price);
+      if (s.membership_enabled !== undefined) setMemEnabled(s.membership_enabled !== 'false');
+      if (s.membership_benefits) {
+        const parsed = parseJson(s.membership_benefits, null);
+        if (Array.isArray(parsed) && parsed.length) setMemBenefits(parsed);
+      }
       if (s.cart_timeline_enabled !== undefined) setTimelineEnabled(s.cart_timeline_enabled !== 'false');
       if (s.cart_timeline_max)        setTimelineMax(s.cart_timeline_max);
       if (s.cart_milestones) {
@@ -244,21 +254,165 @@ const StoreSettings = () => {
         </Field>
       </Section>
 
-      {/* Section 3 — Membership Pricing */}
-      <Section
-        title="Membership Pricing"
-        note="Changes take effect immediately for new purchases"
-        onSave={() => save([['membership_price_monthly', monthly], ['membership_price_yearly', yearly]], setSavingMem)}
-        saving={savingMem}
-        saveLabel="Save Membership Pricing"
-      >
-        <Field label="Monthly Price (₹)">
-          {numInput(monthly, setMonthly)}
-        </Field>
-        <Field label="Yearly Price (₹)">
-          {numInput(yearly, setYearly)}
-        </Field>
-      </Section>
+      {/* Section 3 — InfixPass Membership */}
+      <div style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: '1.5rem', marginBottom: '1.25rem' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg,#0D47A1,#1565C0)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>⭐</div>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#1A237E', margin: 0 }}>InfixPass Membership</h2>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '0.78rem', color: memEnabled ? '#00A651' : '#888', fontWeight: 600 }}>{memEnabled ? 'Active' : 'Disabled'}</span>
+            <Toggle checked={memEnabled} onChange={setMemEnabled} />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+          {/* Price */}
+          <Field label="Membership Price (₹) — Lifetime, one-time payment">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {numInput(memPrice, setMemPrice, { min: 1, style: { width: 120, height: 36, padding: '0 10px', border: '1px solid #ccc', borderRadius: 6, fontSize: '0.875rem', outline: 'none' } })}
+              <span style={{ fontSize: '0.78rem', color: '#888' }}>charged once, lifetime access</span>
+            </div>
+          </Field>
+
+          {/* Benefits editor */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#555', marginBottom: 8 }}>
+              Membership Benefits &nbsp;<span style={{ fontWeight: 400, color: '#aaa' }}>(shown in the popup card)</span>
+            </label>
+
+            {memBenefits.map((b, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 10, padding: '10px 12px', background: '#F8F9FF', borderRadius: 8, border: '1px solid #E8ECFF' }}>
+                {/* Icon picker */}
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: '#aaa', marginBottom: 3, fontWeight: 600 }}>ICON</div>
+                  <select
+                    value={b.icon}
+                    onChange={(e) => setMemBenefits((prev) => prev.map((x, idx) => idx === i ? { ...x, icon: e.target.value } : x))}
+                    style={{ ...selectStyle, width: 90, height: 34 }}
+                  >
+                    <option value="cart">🛒 Cart</option>
+                    <option value="truck">🚚 Truck</option>
+                    <option value="zap">⚡ Zap</option>
+                    <option value="headset">🎧 Support</option>
+                    <option value="star">⭐ Star</option>
+                    <option value="gift">🎁 Gift</option>
+                    <option value="shield">🛡 Shield</option>
+                  </select>
+                </div>
+
+                {/* Title */}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.68rem', color: '#aaa', marginBottom: 3, fontWeight: 600 }}>TITLE</div>
+                  <input
+                    type="text"
+                    value={b.title}
+                    onChange={(e) => setMemBenefits((prev) => prev.map((x, idx) => idx === i ? { ...x, title: e.target.value } : x))}
+                    placeholder="e.g. Free Delivery"
+                    style={{ ...inputStyle, width: '100%' }}
+                  />
+                </div>
+
+                {/* Subtitle */}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.68rem', color: '#aaa', marginBottom: 3, fontWeight: 600 }}>SUBTITLE</div>
+                  <input
+                    type="text"
+                    value={b.subtitle}
+                    onChange={(e) => setMemBenefits((prev) => prev.map((x, idx) => idx === i ? { ...x, subtitle: e.target.value } : x))}
+                    placeholder="Short description"
+                    style={{ ...inputStyle, width: '100%' }}
+                  />
+                </div>
+
+                {/* Remove */}
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'transparent', marginBottom: 3 }}>DEL</div>
+                  <button
+                    onClick={() => setMemBenefits((prev) => prev.filter((_, idx) => idx !== i))}
+                    title="Remove benefit"
+                    style={{ width: 30, height: 34, border: '1px solid #fcc', borderRadius: 6, background: '#fff5f5', cursor: 'pointer', color: '#E53935', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {memBenefits.length < 6 && (
+              <button
+                onClick={() => setMemBenefits((prev) => [...prev, { icon: 'star', title: '', subtitle: '' }])}
+                style={{ padding: '6px 14px', background: '#fff', border: '1.5px solid #1565C0', color: '#1565C0', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                + Add Benefit
+              </button>
+            )}
+          </div>
+
+          {/* Live card preview */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#555', marginBottom: 10 }}>
+              Live Card Preview &nbsp;<span style={{ fontWeight: 400, color: '#aaa' }}>(how the popup looks to customers)</span>
+            </label>
+            <div style={{ maxWidth: 320, border: '1px solid #e0e7ff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 24px rgba(13,71,161,0.10)' }}>
+              {/* Modal header preview */}
+              <div style={{ background: 'linear-gradient(135deg, #06266F 0%, #0D47A1 50%, #1565C0 100%)', padding: '24px 20px 20px', textAlign: 'center', position: 'relative' }}>
+                <div style={{ width: 48, height: 48, background: '#FBBF24', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', fontSize: 22, transform: 'rotate(6deg)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>⭐</div>
+                <div style={{ color: '#fff', fontSize: 20, fontWeight: 900, letterSpacing: '-0.5px' }}>InfixPass</div>
+                <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 2 }}>Lifetime Membership</div>
+                <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 3, background: '#FBBF24', color: '#fff', padding: '6px 16px', borderRadius: 20, marginTop: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>₹</span>
+                  <span style={{ fontSize: 28, fontWeight: 900, lineHeight: 1 }}>{memPrice || 49}</span>
+                  <span style={{ fontSize: 11, opacity: 0.85, marginLeft: 2 }}>one-time</span>
+                </div>
+              </div>
+              {/* Benefits preview */}
+              <div style={{ padding: '14px 14px 18px', background: '#fff' }}>
+                <div style={{ fontSize: 10, color: '#aaa', fontWeight: 700, letterSpacing: '0.08em', textAlign: 'center', marginBottom: 10, textTransform: 'uppercase' }}>What you unlock</div>
+                {memBenefits.map((b, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, background: '#F8F9FF', border: '1px solid #E8ECFF', marginBottom: 6 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: 8, background: '#1565C0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
+                      {{ cart: '🛒', truck: '🚚', zap: '⚡', headset: '🎧', star: '⭐', gift: '🎁', shield: '🛡' }[b.icon] || '✦'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3 }}>{b.title || '—'}</div>
+                      <div style={{ fontSize: 10, color: '#888', lineHeight: 1.3 }}>{b.subtitle || '—'}</div>
+                    </div>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#00A651', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', flexShrink: 0 }}>✓</div>
+                  </div>
+                ))}
+                <div style={{ marginTop: 10, background: '#1565C0', borderRadius: 10, padding: '10px', textAlign: 'center', color: '#fff', fontSize: 12, fontWeight: 700 }}>
+                  Unlock InfixPass — ₹{memPrice || 49} →
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Save */}
+        <button
+          onClick={() => {
+            const validBenefits = memBenefits.filter((b) => b.title.trim());
+            save([
+              ['membership_enabled', String(memEnabled)],
+              ['membership_price',   String(memPrice)],
+              ['membership_benefits', JSON.stringify(validBenefits)],
+            ], setSavingMem);
+          }}
+          disabled={savingMem}
+          style={{
+            marginTop: '1.25rem', padding: '0.55rem 1.5rem',
+            background: savingMem ? '#90CAF9' : '#1565C0', color: '#fff',
+            border: 'none', borderRadius: 6, fontSize: '0.875rem', fontWeight: 600,
+            cursor: savingMem ? 'not-allowed' : 'pointer', transition: 'background 0.15s',
+          }}
+        >
+          {savingMem ? 'Saving…' : 'Save InfixPass Settings'}
+        </button>
+      </div>
 
       {/* Section 4 — Cart Progress Timeline */}
       <div style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: '1.5rem', marginBottom: '1.25rem' }}>

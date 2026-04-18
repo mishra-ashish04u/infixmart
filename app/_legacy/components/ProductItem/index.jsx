@@ -132,6 +132,13 @@ const ProductItem = ({ item }) => {
           )}
         </div>
 
+        {/* Low stock urgency label */}
+        {!outOfStock && item.countInStock > 0 && item.countInStock <= 10 && (
+          <p className='text-[11px] text-amber-600 font-[600] mb-2 flex items-center gap-1 leading-none'>
+            ⚠️ Only {item.countInStock} left
+          </p>
+        )}
+
         {/* Add to Cart button — full width, pill style like 99wholesale */}
         <button
           disabled={outOfStock}
