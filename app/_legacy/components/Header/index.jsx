@@ -6,7 +6,6 @@ import NextImage from 'next/image';
 import logo from '../../assets/logo.webp';
 import Search from '../Search';
 import Badge from '@mui/material/Badge';
-import { styled } from '@mui/material/styles';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { MdOutlineShoppingCart } from 'react-icons/md';
@@ -18,25 +17,21 @@ import Navigation from './Navigation';
 import { MyContext } from '../../LegacyProviders';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { useTheme } from '../../context/ThemeContext';
+import { MdDarkMode, MdLightMode } from 'react-icons/md';
 import useLogout from '../../hooks/useLogout';
 
 const logoSrc = typeof logo === 'string' ? logo : logo?.src || '';
 
-const StyledBadge = styled(Badge)(() => ({
+const BADGE_SX = {
   '& .MuiBadge-badge': {
-    right: -2,
-    top: 0,
-    background: '#E53935',
-    color: '#fff',
-    fontSize: '9px',
-    minWidth: '17px',
-    height: '17px',
-    padding: '0 4px',
-    border: '2px solid #fff',
-    fontWeight: 800,
-    borderRadius: '9999px',
+    right: -2, top: 0,
+    background: '#E53935', color: '#fff',
+    fontSize: '9px', minWidth: '17px', height: '17px',
+    padding: '0 4px', border: '2px solid #fff',
+    fontWeight: 800, borderRadius: '9999px',
   },
-}));
+};
 
 const TICKER_MSGS = [
   '🏷️  Products starting @ just ₹29',
@@ -56,6 +51,7 @@ const Header = () => {
   const context          = useContext(MyContext);
   const { cartCount }    = useCart();
   const { wishlistCount} = useWishlist();
+  const { dark, toggle } = useTheme();
   const logout           = useLogout();
 
   const handleUserClick = (e) => setAnchorEl(e.currentTarget);
@@ -114,6 +110,13 @@ const Header = () => {
                 ? <Link href='/login' className='hover:text-[#1565C0] transition-colors font-[600]'>Login / Register</Link>
                 : <span className='text-gray-600 font-[600] capitalize'>{context?.userData?.name}</span>
               }
+              <button
+                onClick={toggle}
+                aria-label='Toggle dark mode'
+                className='w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-300'
+              >
+                {dark ? <MdLightMode className='text-[15px]' /> : <MdDarkMode className='text-[15px]' />}
+              </button>
             </div>
           </div>
 
@@ -139,12 +142,12 @@ const Header = () => {
                 aria-label={`Wishlist (${wishlistCount} items)`}
                 className='flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl hover:bg-gray-50 transition-colors group'
               >
-                <StyledBadge badgeContent={wishlistCount}>
+                <Badge sx={BADGE_SX} badgeContent={wishlistCount}>
                   {wishlistCount > 0
                     ? <FaHeart className='text-[16px] sm:text-[17px] text-[#E53935]' />
                     : <FaRegHeart className='text-[16px] sm:text-[17px] text-gray-500 group-hover:text-[#1565C0] transition-colors' />
                   }
-                </StyledBadge>
+                </Badge>
                 <span className='text-[9px] text-gray-400 group-hover:text-[#1565C0] mt-0.5 hidden md:block transition-colors'>
                   Wishlist
                 </span>
@@ -156,9 +159,9 @@ const Header = () => {
                 aria-label={`Cart (${cartCount} items)`}
                 className='flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl hover:bg-gray-50 transition-colors group'
               >
-                <StyledBadge badgeContent={cartCount}>
+                <Badge sx={BADGE_SX} badgeContent={cartCount}>
                   <MdOutlineShoppingCart className='text-[19px] sm:text-[20px] text-gray-500 group-hover:text-[#1565C0] transition-colors' />
-                </StyledBadge>
+                </Badge>
                 <span className='text-[9px] text-gray-400 group-hover:text-[#1565C0] mt-0.5 hidden md:block transition-colors'>
                   Cart
                 </span>

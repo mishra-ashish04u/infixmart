@@ -10,6 +10,8 @@ import { MyContext } from '../../LegacyProviders';
 import { imgUrl } from '../../utils/imageUrl';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { useCompare } from '../../context/CompareContext';
+import useCountdown from '../../hooks/useCountdown';
 
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN');
 
@@ -17,6 +19,8 @@ const ProductItem = ({ item }) => {
   const context = useContext(MyContext);
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
+  const { addToCompare, removeFromCompare, isComparing, compareList, maxCompare } = useCompare();
+  const saleCountdown = useCountdown(item.saleEndsAt);
 
   if (!item) return null;
 
@@ -89,16 +93,28 @@ const ProductItem = ({ item }) => {
           )}
         </Link>
 
-        {/* Quick view — slides up on hover */}
-        <div className='absolute bottom-0 left-0 right-0 z-10 translate-y-full group-hover:translate-y-0 transition-transform duration-300'>
-          <Tooltip title='Quick View' placement='top'>
-            <button
-              onClick={() => context.openProductDetailsModalFor(item)}
-              className='w-full bg-[#1565C0]/90 hover:bg-[#1565C0] text-white text-[11px] font-[700] py-2 flex items-center justify-center gap-1.5 backdrop-blur-sm transition-colors'
-            >
-              <MdZoomOutMap className='text-[14px]' /> Quick View
-            </button>
-          </Tooltip>
+        {/* Quick view + ATC — slides up on hover (desktop) */}
+        <div className='absolute bottom-0 left-0 right-0 z-10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden sm:block'>
+          <div className='flex'>
+            <Tooltip title='Quick View' placement='top'>
+              <button
+                onClick={() => context.openProductDetailsModalFor(item)}
+                className='flex-1 bg-[#1565C0]/90 hover:bg-[#1565C0] text-white text-[11px] font-[700] py-2 flex items-center justify-center gap-1.5 backdrop-blur-sm transition-colors border-r border-white/20'
+              >
+                <MdZoomOutMap className='text-[14px]' /> Quick View
+              </button>
+            </Tooltip>
+            {!outOfStock && (
+              <Tooltip title='Add to Cart' placement='top'>
+                <button
+                  onClick={(e) => { e.preventDefault(); addToCart(item.id); }}
+                  className='flex-1 bg-[#111827]/90 hover:bg-[#111827] text-white text-[11px] font-[700] py-2 flex items-center justify-center gap-1.5 backdrop-blur-sm transition-colors'
+                >
+                  <MdOutlineShoppingCart className='text-[14px]' /> Add to Cart
+                </button>
+              </Tooltip>
+            )}
+          </div>
         </div>
       </div>
 
@@ -132,12 +148,44 @@ const ProductItem = ({ item }) => {
           )}
         </div>
 
+        {/* Flash sale countdown */}
+        {saleCountdown && (
+          <div className='flex items-center gap-1.5 bg-[#FFF3E0] border border-[#FFB74D] rounded-lg px-2 py-1 mb-1.5'>
+            <span className='text-[10px] font-[700] text-[#E65100]'>⚡ Ends:</span>
+            <span className='text-[10px] font-[800] text-[#E65100] tabular-nums'>
+              {String(saleCountdown.h).padStart(2,'0')}:{String(saleCountdown.m).padStart(2,'0')}:{String(saleCountdown.s).padStart(2,'0')}
+            </span>
+          </div>
+        )}
+
         {/* Low stock urgency label */}
         {!outOfStock && item.countInStock > 0 && item.countInStock <= 10 && (
           <p className='text-[11px] text-amber-600 font-[600] mb-2 flex items-center gap-1 leading-none'>
             ⚠️ Only {item.countInStock} left
           </p>
         )}
+
+        {/* Compare toggle */}
+        {(() => {
+          const comparing = isComparing(item.id);
+          const full = !comparing && compareList.length >= maxCompare;
+          return (
+            <button
+              onClick={() => comparing ? removeFromCompare(item.id) : addToCompare(item)}
+              disabled={full}
+              title={full ? 'Max 3 products' : comparing ? 'Remove from compare' : 'Add to compare'}
+              className={`w-full text-[11px] font-[600] py-1.5 rounded-xl mb-1.5 border transition-all ${
+                comparing
+                  ? 'bg-[#EEF4FF] border-[#1565C0] text-[#1565C0]'
+                  : full
+                    ? 'border-gray-100 text-gray-300 cursor-not-allowed'
+                    : 'border-gray-200 text-gray-500 hover:border-[#1565C0] hover:text-[#1565C0]'
+              }`}
+            >
+              {comparing ? '✓ Comparing' : '⇄ Compare'}
+            </button>
+          );
+        })()}
 
         {/* Add to Cart button — full width, pill style like 99wholesale */}
         <button

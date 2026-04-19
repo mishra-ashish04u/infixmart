@@ -15,6 +15,8 @@ import { CartProvider } from "./context/CartContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import { SettingsProvider } from "./context/SettingsContext";
 import { RecentlyViewedProvider } from "./context/RecentlyViewedContext";
+import { CompareProvider } from "./context/CompareContext";
+import { ThemeProvider } from "./context/ThemeContext";
 
 const MyContext = createContext();
 
@@ -102,7 +104,9 @@ function LegacyProviders({ children }) {
     <>
       <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
         <MyContext.Provider value={values}>
+          <ThemeProvider>
           <SettingsProvider>
+            <CompareProvider>
             <CartProvider enabled={isLogin}>
               <WishlistProvider enabled={isLogin}>
                 <RecentlyViewedProvider>{children}</RecentlyViewedProvider>
@@ -134,7 +138,9 @@ function LegacyProviders({ children }) {
                 </Dialog>
               </WishlistProvider>
             </CartProvider>
+            </CompareProvider>
           </SettingsProvider>
+          </ThemeProvider>
         </MyContext.Provider>
       </GoogleOAuthProvider>
 

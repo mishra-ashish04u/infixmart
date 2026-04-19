@@ -34,7 +34,11 @@
       "Bash(timeout 30 node -e \"import\\('./next.config.mjs'\\).then\\(m => { console.log\\('Config loaded OK'\\); console.log\\(JSON.stringify\\(Object.keys\\(m.default\\), null, 2\\)\\); }\\).catch\\(e => console.error\\('Config error:', e.message\\)\\)\")",
       "Bash(attrib +P \"c:/Users/ashis/OneDrive/Desktop/NextJs InfixMart/.next\" /D)",
       "Bash(powershell -Command \"attrib +P '.next' /D /S\")",
-      "Bash(NEXT_TELEMETRY_DISABLED=1 npm run build)"
+      "Bash(NEXT_TELEMETRY_DISABLED=1 npm run build)",
+      "Bash(node -e \"require\\('next-pwa'\\); console.log\\('ok'\\)\")",
+      "Bash(head -20 tailwind.config.js)",
+      "Bash(head -20 tailwind.config.ts)",
+      "Bash(node -e ' *)"
     ]
   }
 }

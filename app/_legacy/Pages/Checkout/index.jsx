@@ -143,10 +143,10 @@ const AddressForm = ({ onSave, onCancel, saving }) => {
 };
 
 // ─── Price summary sidebar ─────────────────────────────────────────────────────
-const PriceSummary = ({ cartItems, discount, couponMsg, couponStatus, gstAmount, gstPercent, milestoneShippingFree, shipping }) => {
+const PriceSummary = ({ cartItems, discount, couponMsg, couponStatus, gstAmount, gstPercent, milestoneShippingFree, shipping, walletDeduction }) => {
   const subtotal = cartItems.reduce((s, i) => s + (i.productId?.price || 0) * (i.quantity || 1), 0);
   const gst = gstAmount ?? 0;
-  const total = Math.max(0, subtotal + gst + shipping - (discount || 0));
+  const total = Math.max(0, subtotal + gst + shipping - (discount || 0) - (walletDeduction || 0));
 
   return (
     <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] p-5 lg:sticky lg:top-[80px]">
@@ -177,6 +177,12 @@ const PriceSummary = ({ cartItems, discount, couponMsg, couponStatus, gstAmount,
           <div className="flex justify-between text-[#00A651]">
             <span>Coupon Discount</span>
             <span className="font-[600]">-₹{discount.toLocaleString('en-IN')}</span>
+          </div>
+        )}
+        {walletDeduction > 0 && (
+          <div className="flex justify-between text-[#1565C0]">
+            <span>Wallet Credit</span>
+            <span className="font-[600]">-₹{walletDeduction.toLocaleString('en-IN')}</span>
           </div>
         )}
         {couponMsg && (
@@ -222,6 +228,17 @@ const Checkout = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState('razorpay');
 
+  // Wallet state
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [useWallet, setUseWallet] = useState(false);
+
+  // Load wallet balance
+  useEffect(() => {
+    getData('/api/referral').then((res) => {
+      if (res && !res.error) setWalletBalance(Number(res.walletBalance || 0));
+    }).catch(() => null);
+  }, []);
+
   // Derived values
   const subtotal  = cartItems.reduce((s, i) => s + (i.productId?.price || 0) * (i.quantity || 1), 0);
   const gstAmount = Math.round(subtotal * (gstPercent / 100) * 100) / 100;
@@ -229,7 +246,9 @@ const Checkout = () => {
   const freeShippingMilestone = parsedMilestones.find((m) => m.type === 'free_shipping' && m.enabled !== false);
   const milestoneShippingFree = !!(freeShippingMilestone && subtotal >= Number(freeShippingMilestone.amount));
   const shipping  = subtotal >= FREE_SHIPPING_THRESHOLD || milestoneShippingFree ? 0 : SHIPPING_COST;
-  const total     = Math.max(0, subtotal + gstAmount + shipping - discount);
+  const preWalletTotal = Math.max(0, subtotal + gstAmount + shipping - discount);
+  const walletDeduction = useWallet ? Math.min(walletBalance, preWalletTotal) : 0;
+  const total     = Math.max(0, preWalletTotal - walletDeduction);
   const selectedAddrObj = addresses.find((a) => a.id === selectedAddr);
 
   // Load Razorpay script on mount
@@ -324,6 +343,7 @@ const Checkout = () => {
       orderData = await postData('/api/payment/create-order', {
         addressId: selectedAddr,
         couponCode: appliedCouponCode || undefined,
+        walletDeduction: walletDeduction > 0 ? walletDeduction : undefined,
       });
     } catch {
       toast.error('Could not initiate payment. Please try again.');
@@ -405,6 +425,7 @@ const Checkout = () => {
         addressId: selectedAddr,
         paymentMethod: 'COD',
         couponCode: appliedCouponCode || undefined,
+        walletDeduction: walletDeduction > 0 ? walletDeduction : undefined,
       });
 
       if (!orderRes || orderRes.error) {
@@ -416,6 +437,11 @@ const Checkout = () => {
       await fetchCart();
       toast.dismiss(loadingToast);
       toast.success('Order placed successfully!');
+      if (typeof window !== 'undefined') {
+        const total = orderRes.order?.totalPrice || 0;
+        window.gtag?.('event', 'purchase', { transaction_id: String(orderRes.order?.id || ''), value: total, currency: 'INR' });
+        window.fbq?.('track', 'Purchase', { value: total, currency: 'INR' });
+      }
       router.push(`/order-success?orderId=${orderRes.order?.id || ''}`);
     } catch (err) {
       toast.dismiss(loadingToast);
@@ -525,6 +551,20 @@ const Checkout = () => {
           );
         })}
       </div>
+
+      {/* Wallet */}
+      {walletBalance > 0 && (
+        <div className="mb-4 flex items-center justify-between bg-[#EEF4FF] border border-[#C5D9F5] rounded-xl px-4 py-3">
+          <div>
+            <p className="text-[13px] font-[700] text-[#1565C0]">Wallet Balance: ₹{walletBalance.toLocaleString('en-IN')}</p>
+            <p className="text-[11px] text-gray-500">Apply wallet credit to this order</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" className="sr-only peer" checked={useWallet} onChange={(e) => setUseWallet(e.target.checked)} />
+            <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:bg-[#1565C0] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4" />
+          </label>
+        </div>
+      )}
 
       {/* Coupon */}
       <div className="mb-5">
@@ -681,8 +721,21 @@ const Checkout = () => {
         </button>
       )}
 
-      <p className="text-[11px] text-gray-400 text-center mt-4">
-        🔒 Your payment is secured with 256-bit SSL encryption
+      {/* Trust strip */}
+      <div className="mt-4 flex items-center justify-center gap-4 flex-wrap">
+        {[
+          { icon: "🔒", label: "Secure Payment" },
+          { icon: "✅", label: "Genuine Products" },
+          { icon: "🔄", label: "Easy Returns" },
+          { icon: "🚚", label: "Fast Delivery" },
+        ].map((b) => (
+          <span key={b.label} className="flex items-center gap-1 text-[11px] text-gray-400 font-[500]">
+            <span>{b.icon}</span> {b.label}
+          </span>
+        ))}
+      </div>
+      <p className="text-[10px] text-gray-300 text-center mt-2">
+        256-bit SSL encrypted &nbsp;·&nbsp; Powered by Razorpay
       </p>
 
       <div className="flex gap-3 mt-6">
@@ -715,6 +768,7 @@ const Checkout = () => {
               gstPercent={gstPercent}
               milestoneShippingFree={milestoneShippingFree}
               shipping={shipping}
+              walletDeduction={walletDeduction}
             />
           </div>
         </div>

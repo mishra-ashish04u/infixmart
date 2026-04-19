@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import TextField from "@mui/material/TextField";
 import { Button, CircularProgress } from "@mui/material";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa6";
@@ -14,13 +15,20 @@ import { useForm, required, emailFormat, minLength } from "../../hooks/useForm";
 import SEO from "../../components/SEO";
 
 const Register = () => {
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [refCode, setRefCode] = useState("");
   const [isShowPassword, setIsShowPassword] = useState(false);
   const [isShowConfirmPassword, setIsShowConfirmPassword] = useState(false);
 
   const context = useContext(MyContext);
   const router = useRouter();
+
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) setRefCode(ref.toUpperCase().trim());
+  }, [searchParams]);
 
   const { values: formFields, errors, handleChange, handleBlur, validate, hasErrors } = useForm(
     { name: "", email: "", password: "", confirmPassword: "" },
@@ -47,6 +55,7 @@ const Register = () => {
     setIsLoading(true);
 
     const { confirmPassword, ...payload } = formFields;
+    if (refCode) payload.referralCode = refCode;
     postData("/api/user/register", payload).then((res) => {
       setIsLoading(false);
       if (res?.error !== true) {

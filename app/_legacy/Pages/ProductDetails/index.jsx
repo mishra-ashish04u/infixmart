@@ -23,6 +23,8 @@ import { sanitizeHtml, stripHtml } from '../../utils/html';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useRecentlyViewed } from '../../context/RecentlyViewedContext';
+import useCountdown from '../../hooks/useCountdown';
+import usePeopleViewing from '../../hooks/usePeopleViewing';
 import { MyContext } from '../../LegacyProviders';
 
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN');
@@ -38,6 +40,13 @@ const getDeliveryDate = (plusBusinessDays = 4) => {
   return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
 };
 
+function getYoutubeEmbedUrl(url) {
+  if (!url) return null;
+  if (url.includes('embed/')) return url;
+  const match = url.match(/(?:youtu\.be\/|[?&]v=)([A-Za-z0-9_-]{11})/);
+  return match ? `https://www.youtube.com/embed/${match[1]}` : null;
+}
+
 /* ── Tab ──────────────────────────────────────────────────────────────────── */
 const Tab = ({ label, active, onClick }) => (
   <button
@@ -49,6 +58,65 @@ const Tab = ({ label, active, onClick }) => (
     {label}
   </button>
 );
+
+/* ── Size Guide Modal ─────────────────────────────────────────────────────── */
+const SIZE_CHART = [
+  { size: 'XS', chest: '32–34"', waist: '26–28"', hips: '34–36"' },
+  { size: 'S',  chest: '35–37"', waist: '29–31"', hips: '37–39"' },
+  { size: 'M',  chest: '38–40"', waist: '32–34"', hips: '40–42"' },
+  { size: 'L',  chest: '41–43"', waist: '35–37"', hips: '43–45"' },
+  { size: 'XL', chest: '44–46"', waist: '38–40"', hips: '46–48"' },
+  { size: 'XXL',chest: '47–49"', waist: '41–43"', hips: '49–51"' },
+];
+
+const SizeGuideModal = ({ open, onClose }) => {
+  if (!open) return null;
+  return (
+    <div className='fixed inset-0 z-[200] flex items-center justify-center p-4'>
+      <div className='absolute inset-0 bg-black/50 backdrop-blur-sm' onClick={onClose} />
+      <div className='relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden'>
+        <div className='flex items-center justify-between px-5 py-4 border-b border-gray-100'>
+          <h3 className='text-[16px] font-[800] text-gray-800'>📏 Size Guide</h3>
+          <button onClick={onClose} className='w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors'>
+            <IoClose className='text-[16px]' />
+          </button>
+        </div>
+        <div className='p-5 overflow-y-auto max-h-[70vh]'>
+          <p className='text-[12px] text-gray-400 mb-4'>Measurements are in inches. Use a tape measure for best fit.</p>
+          <div className='overflow-x-auto'>
+            <table className='w-full text-[13px] border-collapse'>
+              <thead>
+                <tr className='bg-[#F0F5FF]'>
+                  {['Size', 'Chest', 'Waist', 'Hips'].map(h => (
+                    <th key={h} className='py-2.5 px-3 text-left font-[700] text-[#1565C0] border-b border-[#D6E4FF]'>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {SIZE_CHART.map((row, i) => (
+                  <tr key={row.size} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                    <td className='py-2 px-3 font-[700] text-gray-800 border-b border-gray-100'>{row.size}</td>
+                    <td className='py-2 px-3 text-gray-600 border-b border-gray-100'>{row.chest}</td>
+                    <td className='py-2 px-3 text-gray-600 border-b border-gray-100'>{row.waist}</td>
+                    <td className='py-2 px-3 text-gray-600 border-b border-gray-100'>{row.hips}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className='mt-4 p-3 bg-[#FFF9E6] border border-[#FFD84D] rounded-xl'>
+            <p className='text-[12px] font-[700] text-amber-700 mb-1'>How to measure yourself</p>
+            <ul className='text-[11px] text-amber-800 space-y-1 list-disc pl-4'>
+              <li><strong>Chest:</strong> Measure around the fullest part of your chest.</li>
+              <li><strong>Waist:</strong> Measure around your natural waistline.</li>
+              <li><strong>Hips:</strong> Measure around the fullest part of your hips.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /* ── VariantPill ──────────────────────────────────────────────────────────── */
 const VariantPill = ({ label, selected, onClick, disabled }) => (
@@ -204,6 +272,8 @@ const FrequentlyBoughtTogether = ({ currentProduct, related, onAddToCart }) => {
 
   const selectedItems = fbtItems.filter(p => selected.has(p.id));
   const total = selectedItems.reduce((sum, p) => sum + Number(p.price || 0), 0);
+  const totalOld = selectedItems.reduce((sum, p) => sum + Number(p.oldprice || p.price || 0), 0);
+  const bundleSavings = totalOld > total ? totalOld - total : 0;
 
   return (
     <div className='mt-4 p-4 bg-[#F8FAFF] border border-[#E3EDFF] rounded-2xl'>
@@ -265,19 +335,142 @@ const FrequentlyBoughtTogether = ({ currentProduct, related, onAddToCart }) => {
         ))}
       </div>
 
-      <div className='flex items-center justify-between gap-3 flex-wrap pt-2 border-t border-[#E3EDFF]'>
-        <div>
-          <p className='text-[11px] text-gray-400'>Total for {selected.size} item{selected.size !== 1 ? 's' : ''}</p>
-          <p className='text-[20px] font-[900] text-[#1565C0] leading-tight'>₹{fmt(total)}</p>
+      <div className='pt-2 border-t border-[#E3EDFF]'>
+        <div className='flex items-center justify-between gap-3 flex-wrap mb-2'>
+          <div>
+            <p className='text-[11px] text-gray-400'>Bundle total ({selected.size} item{selected.size !== 1 ? 's' : ''})</p>
+            <div className='flex items-baseline gap-2'>
+              <p className='text-[20px] font-[900] text-[#1565C0] leading-tight'>₹{fmt(total)}</p>
+              {totalOld > total && (
+                <span className='text-[13px] text-gray-400 line-through'>₹{fmt(totalOld)}</span>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => selectedItems.forEach(p => onAddToCart(p.id))}
+            className='flex items-center gap-2 bg-[#1565C0] text-white text-[13px] font-[700] px-5 py-2.5 rounded-xl hover:bg-[#0D47A1] transition-colors shadow-sm'
+          >
+            <MdOutlineShoppingCart className='text-[16px]' />
+            Add All to Cart
+          </button>
         </div>
-        <button
-          onClick={() => selectedItems.forEach(p => onAddToCart(p.id))}
-          className='flex items-center gap-2 bg-[#1565C0] text-white text-[13px] font-[700] px-5 py-2.5 rounded-xl hover:bg-[#0D47A1] transition-colors'
-        >
-          <MdOutlineShoppingCart className='text-[16px]' />
-          Add {selected.size} to Cart
-        </button>
+        {bundleSavings > 0 && (
+          <p className='text-[12px] text-green-700 font-[700] bg-green-50 rounded-lg px-3 py-1.5 text-center'>
+            🎉 Bundle saves you ₹{fmt(bundleSavings)}!
+          </p>
+        )}
       </div>
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════════════════════════════════ */
+/* ── Q&A section ─────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════ */
+const QASection = ({ productId }) => {
+  const { isLogin } = useContext(MyContext);
+  const [questions, setQuestions] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [question, setQuestion] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchQA = async () => {
+    setLoading(true);
+    const res = await getData(`/api/product-qa?productId=${productId}&perPage=8`);
+    if (res && !res.error) {
+      setQuestions(res.questions || []);
+      setTotal(res.total || 0);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchQA(); }, [productId]);
+
+  const handleAsk = async (e) => {
+    e.preventDefault();
+    if (!question.trim()) return;
+    setSubmitting(true);
+    const res = await postData('/api/product-qa', { productId, question: question.trim() });
+    setSubmitting(false);
+    if (res && !res.error) {
+      toast.success('Question submitted! We'll answer soon.');
+      setQuestion('');
+      fetchQA();
+    } else {
+      toast.error(res?.message || 'Failed to submit');
+    }
+  };
+
+  return (
+    <div>
+      <div className='flex items-center justify-between mb-4'>
+        <h3 className='text-[15px] font-[700] text-gray-800'>
+          Questions & Answers <span className='text-gray-400 font-[400]'>({total})</span>
+        </h3>
+      </div>
+
+      {/* Ask a question */}
+      {isLogin ? (
+        <form onSubmit={handleAsk} className='bg-[#F8FAFF] border border-[#E3EDFF] rounded-2xl p-4 mb-5'>
+          <p className='text-[13px] font-[600] text-gray-700 mb-2'>Ask a question about this product</p>
+          <div className='flex gap-2'>
+            <input
+              value={question}
+              onChange={e => setQuestion(e.target.value)}
+              placeholder='Type your question here...'
+              maxLength={500}
+              className='flex-1 border border-gray-200 rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:border-[#1565C0]'
+            />
+            <button
+              type='submit'
+              disabled={submitting || !question.trim()}
+              className='bg-[#1565C0] text-white text-[13px] font-[700] px-4 py-2 rounded-xl hover:bg-[#0D47A1] transition-colors disabled:opacity-50'
+            >
+              Ask
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className='bg-[#F8FAFF] border border-[#E3EDFF] rounded-2xl p-4 mb-5 text-center'>
+          <Link href='/login' className='text-[13px] text-[#1565C0] hover:underline font-[600]'>
+            Login to ask a question →
+          </Link>
+        </div>
+      )}
+
+      {loading ? (
+        <div className='text-center py-8 text-gray-400 text-[13px]'>Loading questions…</div>
+      ) : questions.length === 0 ? (
+        <div className='text-center py-10'>
+          <p className='text-gray-400 text-[14px]'>No questions yet. Be the first to ask!</p>
+        </div>
+      ) : (
+        <div className='space-y-3'>
+          {questions.map(q => (
+            <div key={q.id} className='border border-gray-100 rounded-2xl p-4 bg-white'>
+              <div className='flex gap-2 mb-2'>
+                <span className='text-[11px] font-[800] text-[#1565C0] bg-[#EEF4FF] px-2 py-0.5 rounded-full flex-shrink-0'>Q</span>
+                <p className='text-[13px] text-gray-800 font-[500]'>{q.question}</p>
+              </div>
+              {q.answer ? (
+                <div className='flex gap-2 ml-1 bg-green-50 border border-green-100 rounded-xl px-3 py-2'>
+                  <span className='text-[11px] font-[800] text-green-700 bg-green-100 px-2 py-0.5 rounded-full flex-shrink-0 h-fit'>A</span>
+                  <div>
+                    <p className='text-[13px] text-gray-700 leading-relaxed'>{q.answer}</p>
+                    {q.answerer && <p className='text-[10px] text-gray-400 mt-1'>— {q.answerer.name} · InfixMart Team</p>}
+                  </div>
+                </div>
+              ) : (
+                <p className='text-[12px] text-gray-400 ml-1 italic'>Answer coming soon…</p>
+              )}
+              <p className='text-[11px] text-gray-400 mt-2 ml-1'>
+                Asked by {q.asker?.name || 'Customer'} · {new Date(q.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -302,6 +495,7 @@ const ReviewsSection = ({ productId }) => {
   const [formRating, setFormRating] = useState(5);
   const [formTitle, setFormTitle] = useState('');
   const [formComment, setFormComment] = useState('');
+  const [formImageUrl, setFormImageUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [helpful, setHelpful] = useState({}); // { reviewId: true/false }
@@ -338,8 +532,9 @@ const ReviewsSection = ({ productId }) => {
     e.preventDefault();
     if (!formComment.trim()) { toast.error('Please write a comment'); return; }
     setSubmitting(true);
+    const images = formImageUrl.trim() ? [formImageUrl.trim()] : [];
     const res = await postData('/api/reviews', {
-      productId, rating: formRating, title: formTitle, comment: formComment,
+      productId, rating: formRating, title: formTitle, comment: formComment, images,
     });
     setSubmitting(false);
     if (res && !res.error) {
@@ -480,6 +675,16 @@ const ReviewsSection = ({ productId }) => {
               helperText={`${formComment.length}/1000`}
             />
           </div>
+          <div className='mb-4'>
+            <TextField
+              label='Photo URL (optional)'
+              value={formImageUrl}
+              onChange={e => setFormImageUrl(e.target.value)}
+              fullWidth size='small'
+              placeholder='https://...'
+              helperText='Paste a direct image URL to attach a photo to your review'
+            />
+          </div>
           <div className='flex gap-3'>
             <Button
               type='submit' disabled={submitting || !formComment.trim()} variant='contained'
@@ -552,7 +757,7 @@ const ReviewsSection = ({ productId }) => {
                       <p className='text-[13px] font-[700] text-gray-800'>{r.user?.name || 'User'}</p>
                       {r.verified && (
                         <span className='flex items-center gap-1 text-[10px] text-green-700 bg-green-50 font-[600] px-2 py-0.5 rounded-full border border-green-100'>
-                          <MdVerified className='text-green-500' /> Verified
+                          <MdVerified className='text-green-500' /> Verified Purchase
                         </span>
                       )}
                     </div>
@@ -563,6 +768,15 @@ const ReviewsSection = ({ productId }) => {
                   <Rating value={r.rating} readOnly size='small' />
                   {r.title && <p className='text-[14px] font-[700] text-gray-800 mt-1.5'>{r.title}</p>}
                   <p className='text-[13px] text-gray-600 mt-1 leading-relaxed'>{r.comment}</p>
+                  {r.images && r.images.length > 0 && (
+                    <div className='flex gap-2 mt-2 flex-wrap'>
+                      {r.images.map((url, i) => (
+                        <a key={i} href={url} target='_blank' rel='noopener noreferrer'>
+                          <img src={url} alt={`Review photo ${i + 1}`} className='w-16 h-16 object-cover rounded-xl border border-gray-100 hover:opacity-90 transition-opacity' />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   {/* Helpful vote */}
                   <div className='flex items-center gap-2 mt-3 pt-2 border-t border-gray-50'>
                     <span className='text-[11px] text-gray-400'>Helpful?</span>
@@ -632,6 +846,7 @@ const ProductDetails = () => {
   const [qty, setQty] = useState(1);
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [selectedWeight, setSelectedWeight] = useState('');
   const [reviewCount, setReviewCount] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
@@ -736,6 +951,8 @@ const ProductDetails = () => {
   const lowStock = inStock && product.countInStock <= 10;
   const stockPct = Math.min(100, Math.round((product.countInStock / 50) * 100));
   const savings = product.oldprice > product.price ? product.oldprice - product.price : 0;
+  const saleCountdown = useCountdown(product.saleEndsAt);
+  const peopleViewing = usePeopleViewing(product.id);
   const productPath = `/product/${product.slug || product.id}`;
   const productDescription = stripHtml(product.description || '').slice(0, 155);
   const safeDescriptionHtml = sanitizeHtml(product.description || '');
@@ -892,11 +1109,19 @@ const ProductDetails = () => {
                   Brand: <span className='font-[700] text-gray-800'>{product.brand}</span>
                 </p>
               )}
-              {reviewCount > 0 && (
-                <span className='text-[12px] text-gray-400 font-[500]'>
-                  ✅ {reviewCount * 4}+ buyers
-                </span>
-              )}
+              <div className='flex items-center gap-3 flex-wrap'>
+                {reviewCount > 0 && (
+                  <span className='text-[12px] text-gray-400 font-[500]'>
+                    ✅ {reviewCount * 4}+ buyers
+                  </span>
+                )}
+                {peopleViewing !== null && (
+                  <span className='flex items-center gap-1 text-[12px] font-[600] text-[#E53935]'>
+                    <span className='inline-block w-1.5 h-1.5 rounded-full bg-[#E53935] animate-ping mr-0.5' />
+                    {peopleViewing} people viewing now
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Rating */}
@@ -935,6 +1160,25 @@ const ProductDetails = () => {
                 <p className='text-[13px] text-green-700 font-[700] flex items-center gap-1.5'>
                   🎉 You save ₹{fmt(savings)}!
                 </p>
+              )}
+              {saleCountdown && (
+                <div className='mt-2 flex items-center gap-2 bg-[#FFF3E0] border border-[#FFB74D] rounded-xl px-3 py-2'>
+                  <span className='text-[12px] font-[700] text-[#E65100]'>⚡ Sale ends in:</span>
+                  <div className='flex items-center gap-1'>
+                    {[
+                      { v: saleCountdown.h, l: 'h' },
+                      { v: saleCountdown.m, l: 'm' },
+                      { v: saleCountdown.s, l: 's' },
+                    ].map(({ v, l }) => (
+                      <span key={l} className='flex items-center'>
+                        <span className='bg-[#E65100] text-white text-[12px] font-[800] w-8 text-center py-0.5 rounded-md tabular-nums'>
+                          {String(v).padStart(2, '0')}
+                        </span>
+                        <span className='text-[11px] text-[#E65100] font-[700] mx-0.5'>{l}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )}
               <p className='text-[11px] text-gray-400 mt-1'>Inclusive of all taxes. Free delivery eligible.</p>
             </div>
@@ -991,9 +1235,17 @@ const ProductDetails = () => {
             )}
             {sizeOptions.length > 0 && (
               <div className='mb-4'>
-                <p className='text-[13px] font-[700] text-gray-700 mb-2'>
-                  Size: <span className='text-[#1565C0]'>{selectedSize}</span>
-                </p>
+                <div className='flex items-center justify-between mb-2'>
+                  <p className='text-[13px] font-[700] text-gray-700'>
+                    Size: <span className='text-[#1565C0]'>{selectedSize}</span>
+                  </p>
+                  <button
+                    onClick={() => setSizeGuideOpen(true)}
+                    className='text-[12px] text-[#1565C0] hover:underline font-[600] flex items-center gap-1'
+                  >
+                    📏 Size Guide
+                  </button>
+                </div>
                 <div className='flex flex-wrap'>
                   {sizeOptions.map(s => (
                     <VariantPill key={s} label={s} selected={selectedSize === s} onClick={() => setSelectedSize(s)} />
@@ -1075,6 +1327,14 @@ const ProductDetails = () => {
               </button>
             </div>
 
+            {/* ── Return policy micro-line ────────────────────────────── */}
+            <p className='text-[12px] text-gray-500 mt-3 flex items-center gap-1.5'>
+              <span>🔄</span>
+              <span>Easy 7-day returns &amp; exchanges. &nbsp;
+                <a href='/return-policy' className='text-[#1565C0] font-[600] hover:underline'>View policy →</a>
+              </span>
+            </p>
+
             {/* ── Frequently Bought Together ──────────────────────────── */}
             <FrequentlyBoughtTogether
               currentProduct={product}
@@ -1122,6 +1382,8 @@ const ProductDetails = () => {
             <Tab label='Description' active={activeTab === 0} onClick={() => setActiveTab(0)} />
             <Tab label='Specifications' active={activeTab === 1} onClick={() => setActiveTab(1)} />
             <Tab label={`Reviews (${reviewCount})`} active={activeTab === 2} onClick={() => setActiveTab(2)} />
+            {product.videoUrl && <Tab label='▶ Video' active={activeTab === 3} onClick={() => setActiveTab(3)} />}
+            <Tab label='Q&A' active={activeTab === 4} onClick={() => setActiveTab(4)} />
           </div>
 
           {/* Tab content */}
@@ -1166,6 +1428,28 @@ const ProductDetails = () => {
             )}
 
             {activeTab === 2 && <ReviewsSection productId={product.id} />}
+
+            {activeTab === 4 && <QASection productId={product.id} />}
+
+            {activeTab === 3 && product.videoUrl && (() => {
+              const embedUrl = getYoutubeEmbedUrl(product.videoUrl);
+              return embedUrl ? (
+                <div className='relative w-full' style={{ paddingBottom: '56.25%' }}>
+                  <iframe
+                    src={embedUrl}
+                    title='Product video'
+                    allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+                    allowFullScreen
+                    className='absolute inset-0 w-full h-full rounded-xl border-0'
+                  />
+                </div>
+              ) : (
+                <a href={product.videoUrl} target='_blank' rel='noopener noreferrer'
+                   className='text-[#1565C0] underline text-[14px]'>
+                  Watch product video →
+                </a>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -1249,6 +1533,7 @@ const ProductDetails = () => {
         <div className='h-safe-bottom' />
       </div>
     </div>
+    <SizeGuideModal open={sizeGuideOpen} onClose={() => setSizeGuideOpen(false)} />
   );
 };
 

@@ -1,4 +1,5 @@
-import React from 'react';
+"use client";
+import React, { useState } from 'react';
 import Link from 'next/link';
 import NextImage from 'next/image';
 import logo from '../../assets/logo.webp';
@@ -6,6 +7,7 @@ import { FaFacebookF, FaInstagram, FaYoutube, FaWhatsapp, FaLinkedinIn, FaTwitte
 import { MdLocalShipping, MdVerified, MdSupportAgent } from 'react-icons/md';
 import { FaShieldAlt, FaUndo } from 'react-icons/fa';
 import { HiOutlineMail, HiOutlinePhone } from 'react-icons/hi';
+import { postData } from '../../utils/api';
 
 const logoSrc = typeof logo === 'string' ? logo : logo?.src || '';
 
@@ -33,6 +35,7 @@ const ACCOUNT_LINKS = [
   { label: 'My Orders',   to: '/my-orders'  },
   { label: 'Wishlist',    to: '/my-list'    },
   { label: 'Addresses',   to: '/my-address' },
+  { label: 'Refer & Earn', to: '/referral'  },
   { label: 'Track Order', to: '/my-orders'  },
   { label: 'Login',       to: '/login'      },
 ];
@@ -54,8 +57,52 @@ const SOCIALS = [
   { icon: <FaTwitter />,    href: '#', label: 'Twitter'   },
 ];
 
-const Footer = () => (
+const Footer = () => {
+  const [email, setEmail] = useState('');
+  const [subState, setSubState] = useState('idle'); // idle | loading | done | error
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) return;
+    setSubState('loading');
+    const res = await postData('/api/newsletter/subscribe', { email: email.trim(), source: 'footer' });
+    setSubState(res && !res.error ? 'done' : 'error');
+  };
+
+  return (
   <footer className='bg-white border-t border-gray-200'>
+
+    {/* Newsletter strip */}
+    <div className='bg-[#1565C0]'>
+      <div className='container py-8'>
+        <div className='flex flex-col md:flex-row items-center justify-between gap-4'>
+          <div className='text-white text-center md:text-left'>
+            <p className='text-[18px] font-[800]'>Get exclusive deals in your inbox</p>
+            <p className='text-[13px] text-blue-200 mt-0.5'>Subscribe for flash sales, new arrivals & members-only offers.</p>
+          </div>
+          {subState === 'done' ? (
+            <p className='text-white font-[700] text-[15px] bg-white/20 px-6 py-3 rounded-xl'>🎉 You're subscribed!</p>
+          ) : (
+            <form onSubmit={handleSubscribe} className='flex gap-2 w-full md:w-auto'>
+              <input
+                type='email'
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder='Your email address'
+                className='flex-1 md:w-[280px] px-4 py-2.5 rounded-xl text-[14px] focus:outline-none text-gray-800'
+              />
+              <button
+                type='submit'
+                disabled={subState === 'loading'}
+                className='bg-[#E53935] hover:bg-[#C62828] text-white font-[700] px-5 py-2.5 rounded-xl text-[13px] transition-colors whitespace-nowrap disabled:opacity-60'
+              >
+                {subState === 'loading' ? '…' : 'Subscribe'}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
 
     {/* Trust strip */}
     <div className='bg-[#F5F7FF] border-b border-gray-200'>
@@ -215,6 +262,7 @@ const Footer = () => (
     </div>
 
   </footer>
-);
+  );
+};
 
 export default Footer;

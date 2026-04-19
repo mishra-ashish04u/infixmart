@@ -87,6 +87,8 @@ export default function ProductForm() {
     productRam: "",
     size: "",
     productWeight: "",
+    videoUrl: "",
+    saleEndsAt: "",
   });
 
   // Load categories
@@ -119,6 +121,8 @@ export default function ProductForm() {
           productRam: Array.isArray(p.productRam) ? p.productRam.join(", ") : (p.productRam || ""),
           size: Array.isArray(p.size) ? p.size.join(", ") : (p.size || ""),
           productWeight: Array.isArray(p.productWeight) ? p.productWeight.join(", ") : (p.productWeight || ""),
+          videoUrl: p.videoUrl || "",
+          saleEndsAt: p.saleEndsAt ? p.saleEndsAt.slice(0, 16) : "",
         });
       })
       .catch(console.error)
@@ -278,6 +282,8 @@ export default function ProductForm() {
         productRam: toArray(form.productRam),
         size: toArray(form.size),
         productWeight: toArray(form.productWeight),
+        videoUrl: form.videoUrl.trim() || null,
+        saleEndsAt: form.saleEndsAt || null,
       };
 
       if (isEdit) {
@@ -483,6 +489,14 @@ export default function ProductForm() {
             <div>
               <label style={labelStyle}>Weight Options</label>
               <input style={inputStyle} value={form.productWeight} onChange={set("productWeight")} placeholder="e.g. 250g, 500g, 1kg" />
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label style={labelStyle}>Product Video URL (YouTube)</label>
+              <input style={inputStyle} value={form.videoUrl} onChange={set("videoUrl")} placeholder="https://www.youtube.com/watch?v=..." />
+            </div>
+            <div>
+              <label style={labelStyle}>Flash Sale Ends At</label>
+              <input type="datetime-local" style={inputStyle} value={form.saleEndsAt} onChange={set("saleEndsAt")} />
             </div>
           </div>
         </div>

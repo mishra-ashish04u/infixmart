@@ -71,6 +71,8 @@ const HeroSlider = () => {
                     src={slide.src}
                     alt={slide.alt}
                     className='w-full h-full object-cover object-center'
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    fetchpriority={i === 0 ? 'high' : 'auto'}
                     onError={(e) => { e.target.src = FALLBACK[0]; }}
                   />
                 </Link>

@@ -35,6 +35,7 @@ const Search = () => {
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
+  const [didYouMean, setDidYouMean] = useState([]);
   const [recentSearches, setRecentSearches] = useState([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -69,10 +70,19 @@ const Search = () => {
     if (!q.trim()) { setSuggestions([]); setActiveIndex(-1); return; }
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
+      setDidYouMean([]);
       const res = await getData(`/api/product?search=${encodeURIComponent(q)}&perPage=6`);
-      if (res && !res.error) {
-        setSuggestions(res.products || res.data || []);
+      const found = res && !res.error ? (res.products || res.data || []) : [];
+      setSuggestions(found);
+
+      if (found.length === 0) {
+        const words = q.trim().split(/\s+/);
+        const broaderQuery = words.length > 1 ? words[0] : q.slice(0, Math.max(2, q.length - 1));
+        const fallback = await getData(`/api/product?search=${encodeURIComponent(broaderQuery)}&perPage=4`);
+        const fallbackProducts = fallback && !fallback.error ? (fallback.products || fallback.data || []) : [];
+        setDidYouMean(fallbackProducts.map((p) => p.name).slice(0, 3));
       }
+
       setLoading(false);
       setActiveIndex(-1);
     }, 350);
@@ -117,6 +127,7 @@ const Search = () => {
   const clearQuery = () => {
     setQuery('');
     setSuggestions([]);
+    setDidYouMean([]);
     setActiveIndex(-1);
     inputRef.current?.focus();
   };
@@ -343,8 +354,26 @@ const Search = () => {
                   </button>
                 </>
               ) : (
-                <div className="px-4 py-4 text-[13px] text-gray-400 text-center">
-                  No products found for &ldquo;{query}&rdquo;
+                <div className="px-4 py-4 text-center">
+                  <p className="text-[13px] text-gray-400">
+                    No products found for &ldquo;{query}&rdquo;
+                  </p>
+                  {didYouMean.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-[12px] text-gray-400 mb-1.5">Did you mean:</p>
+                      <div className="flex flex-wrap gap-1.5 justify-center">
+                        {didYouMean.map((name) => (
+                          <button
+                            key={name}
+                            onClick={() => handleTermClick(name)}
+                            className="text-[12px] text-[#1565C0] underline underline-offset-2 hover:text-[#0D47A1] transition-colors font-[500]"
+                          >
+                            {name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>

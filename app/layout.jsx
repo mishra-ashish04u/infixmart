@@ -2,6 +2,16 @@
 import "./tailwind.css";                                          // @tailwind base / components / utilities
 import "./globals.css";                                           // minimal html/body resets
 import "./_legacy/index.css";                                     // global custom styles (.container, body, etc.)
+import Script from "next/script";
+import { Montserrat } from "next/font/google";
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  style: ["normal", "italic"],
+  display: "swap",
+  variable: "--font-montserrat",
+});
 
 // ── Component-level CSS ──────────────────────────────────────────────────────
 import "./_legacy/components/bannerBoxV2/style.css";
@@ -87,16 +97,19 @@ const websiteJsonLd = {
   },
 };
 
+const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
+const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" className={montserrat.variable}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
-          rel="stylesheet"
-        />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#1565C0" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="InfixMart" />
+        <link rel="apple-touch-icon" href="/images/icon-192.png" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
@@ -107,6 +120,35 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body suppressHydrationWarning>
+
+        {/* ── Google Analytics 4 ── */}
+        {GA4_ID && (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`} strategy="afterInteractive" />
+            <Script id="ga4-init" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA4_ID}', { page_path: window.location.pathname });
+            `}} />
+          </>
+        )}
+
+        {/* ── Meta Pixel ── */}
+        {META_PIXEL_ID && (
+          <Script id="meta-pixel" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
+            !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '${META_PIXEL_ID}');
+            fbq('track', 'PageView');
+          `}} />
+        )}
+
         {/* #page-wrapper clips horizontal overflow WITHOUT breaking position:sticky */}
         <div id="page-wrapper">
           <LegacyProviders>{children}</LegacyProviders>

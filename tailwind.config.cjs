@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: "class",
   content: ["./app/**/*.{js,jsx,ts,tsx,mdx}"],
   // Preflight ENABLED — matches the Vite version (no preflight:false)
   corePlugins: {

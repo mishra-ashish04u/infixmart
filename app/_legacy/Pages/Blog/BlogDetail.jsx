@@ -18,6 +18,7 @@ const BlogDetail = () => {
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState([]);
 
   useEffect(() => {
     setLoading(true);
@@ -27,6 +28,12 @@ const BlogDetail = () => {
       .then((res) => {
         if (res && !res.error && res.blog) {
           setBlog(res.blog);
+          const cat = res.blog.catName;
+          if (cat) {
+            getData(`/api/product?search=${encodeURIComponent(cat)}&perPage=4`).then(r => {
+              if (r && !r.error) setRelatedProducts(r.products || []);
+            });
+          }
         } else {
           setNotFound(true);
         }
@@ -158,7 +165,26 @@ const BlogDetail = () => {
           {blog.content || <span className='text-gray-400 italic'>No content yet.</span>}
         </div>
 
-        <div className='mt-10 pt-6 border-t border-gray-200'>
+        {relatedProducts.length > 0 && (
+          <div className='mt-10 pt-6 border-t border-gray-200'>
+            <h3 className='text-[16px] font-[800] text-gray-800 mb-4'>🛍️ Shop Related Products</h3>
+            <div className='grid grid-cols-2 sm:grid-cols-4 gap-3'>
+              {relatedProducts.map(p => (
+                <Link key={p.id} href={`/product/${p.slug || p.id}`}
+                  className='group bg-white border border-gray-100 rounded-xl p-3 hover:border-[#1565C0]/30 hover:shadow-md transition-all'>
+                  <div className='w-full aspect-square bg-[#F8FAFF] rounded-lg overflow-hidden mb-2'>
+                    <img src={imgUrl(p.images?.[0])} alt={p.name}
+                      className='w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300' />
+                  </div>
+                  <p className='text-[12px] font-[600] text-gray-700 line-clamp-2 leading-snug'>{p.name}</p>
+                  <p className='text-[13px] font-[800] text-[#1565C0] mt-1'>₹{Number(p.price).toLocaleString('en-IN')}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className='mt-8 pt-6 border-t border-gray-200'>
           <Link
             href='/blog'
             className='inline-flex items-center gap-2 text-[13px] font-[600] text-[#1565C0] border border-[#1565C0] px-5 py-2.5 rounded-full hover:bg-[#1565C0] hover:text-white transition-colors'

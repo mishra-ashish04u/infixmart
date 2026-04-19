@@ -101,16 +101,34 @@ export default function UserManagement() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [segment, setSegment] = useState("");
   const [expanded, setExpanded] = useState(null);
   const [suspendTarget, setSuspendTarget] = useState(null);
-  const [toggling, setToggling] = useState(null); // userId being toggled
+  const [toggling, setToggling] = useState(null);
   const debounceRef = useRef(null);
 
-  const loadUsers = async (p = 1, q = "") => {
+  const SEGMENTS = [
+    { value: "",           label: "All" },
+    { value: "new",        label: "New (30d)" },
+    { value: "returning",  label: "Returning" },
+    { value: "high_value", label: "High Value" },
+    { value: "inactive",   label: "Inactive" },
+  ];
+
+  const SEGMENT_COLORS = {
+    new:        { bg: "#E3F2FD", color: "#1565C0" },
+    returning:  { bg: "#E8F5E9", color: "#2E7D32" },
+    high_value: { bg: "#FFF8E1", color: "#F57F17" },
+    inactive:   { bg: "#F5F5F5", color: "#757575" },
+    regular:    { bg: "#F5F5F5", color: "#555" },
+  };
+
+  const loadUsers = async (p = 1, q = "", seg = segment) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: p, perPage: 20 });
       if (q) params.set("search", q);
+      if (seg) params.set("segment", seg);
       const res = await adminAxios.get(`/api/admin/users?${params}`);
       setUsers(res.data.users || []);
       setTotalPages(res.data.totalPages || 1);
@@ -121,7 +139,7 @@ export default function UserManagement() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { loadUsers(1, search); }, [search]);
+  useEffect(() => { loadUsers(1, search, segment); }, [search, segment]);
 
   const handleSearchChange = (e) => {
     const val = e.target.value;
@@ -158,13 +176,23 @@ export default function UserManagement() {
         </div>
       </div>
 
+      {/* Segment filter tabs */}
+      <div style={{ display: "flex", gap: 0, marginBottom: "1.25rem", borderBottom: "1px solid #E0E0E0", overflowX: "auto" }}>
+        {SEGMENTS.map((s) => (
+          <button key={s.value} onClick={() => { setSegment(s.value); setPage(1); }}
+            style={{ padding: "0.6rem 1rem", background: "none", border: "none", cursor: "pointer", fontSize: "0.85rem", fontWeight: segment === s.value ? 700 : 400, color: segment === s.value ? "#1565C0" : "#555", borderBottom: segment === s.value ? "2px solid #1565C0" : "2px solid transparent", whiteSpace: "nowrap" }}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
       {/* Table */}
       <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #E0E0E0", overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
             <thead>
               <tr style={{ background: "#F9FAFB" }}>
-                {["Avatar", "Name", "Email", "Role", "Joined", "Status", "Action"].map((h) => (
+                {["Avatar", "Name", "Email", "Segment", "Role", "Joined", "Status", "Action"].map((h) => (
                   <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#555", borderBottom: "1px solid #E0E0E0", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
@@ -202,6 +230,19 @@ export default function UserManagement() {
 
                         {/* Email */}
                         <td style={{ padding: "0.65rem 1rem", color: "#555" }}>{user.email}</td>
+
+                        {/* Segment */}
+                        <td style={{ padding: "0.65rem 1rem" }}>
+                          {user.segment && user.segment !== "regular" && (() => {
+                            const sc = SEGMENT_COLORS[user.segment] || SEGMENT_COLORS.regular;
+                            const label = { new: "New", returning: "Returning", high_value: "High Value", inactive: "Inactive" }[user.segment] || user.segment;
+                            return (
+                              <span style={{ padding: "0.18rem 0.6rem", borderRadius: 999, fontSize: "0.72rem", fontWeight: 600, background: sc.bg, color: sc.color }}>
+                                {label}
+                              </span>
+                            );
+                          })()}
+                        </td>
 
                         {/* Role */}
                         <td style={{ padding: "0.65rem 1rem" }}>
@@ -253,7 +294,7 @@ export default function UserManagement() {
             </tbody>
           </table>
         </div>
-        <Pagination page={page} totalPages={totalPages} onChange={(p) => loadUsers(p, search)} />
+        <Pagination page={page} totalPages={totalPages} onChange={(p) => loadUsers(p, search, segment)} />
       </div>
 
       {/* Suspend confirm */}

@@ -8,6 +8,7 @@ import {
   deleteProductRecord,
   getAllProducts,
   getFeaturedProducts,
+  getProductBrands,
   getProductByCategoryId,
   getProductByCategoryName,
   getProductByExactRating,
@@ -68,8 +69,13 @@ async function dispatchNativeRoute(request, segments) {
         minPrice: searchParams.get("minPrice") || "",
         maxPrice: searchParams.get("maxPrice") || "",
         sort: searchParams.get("sort") || "",
+        brand: searchParams.get("brand") || "",
       })
     );
+  }
+
+  if (request.method === "GET" && first === "brands") {
+    return ok(await getProductBrands());
   }
 
   if (request.method === "GET" && first === "getproductby-catid" && second) {

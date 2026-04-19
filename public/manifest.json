@@ -1,0 +1,44 @@
+{
+  "name": "InfixMart Wholesale",
+  "short_name": "InfixMart",
+  "description": "India's trusted wholesale store — bulk products at the best prices",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1565C0",
+  "orientation": "portrait-primary",
+  "categories": ["shopping", "business"],
+  "lang": "en-IN",
+  "icons": [
+    {
+      "src": "/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "My Orders",
+      "url": "/my-orders",
+      "description": "Track your orders"
+    },
+    {
+      "name": "Shop",
+      "url": "/productListing",
+      "description": "Browse all products"
+    },
+    {
+      "name": "Cart",
+      "url": "/cart",
+      "description": "View your cart"
+    }
+  ]
+}

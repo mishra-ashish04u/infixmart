@@ -56,6 +56,9 @@ export default function ProductManagement() {
   const [actionLoadingKey, setActionLoadingKey] = useState("");
   const debounceRef = useRef(null);
 
+  const LOW_STOCK_THRESHOLD = 5;
+  const lowStockProducts = products.filter((p) => Number(p.countInStock) <= LOW_STOCK_THRESHOLD && Number(p.countInStock) >= 0);
+
   const loadProducts = async (p = 1, q = "") => {
     setLoading(true);
     try {
@@ -145,6 +148,26 @@ export default function ProductManagement() {
           </button>
         </div>
       </div>
+
+      {/* Low stock alert */}
+      {!loading && lowStockProducts.length > 0 && (
+        <div style={{ background: "#FFF3E0", border: "1px solid #FFB74D", borderRadius: 8, padding: "0.875rem 1rem", marginBottom: "1.25rem" }}>
+          <p style={{ fontWeight: 700, color: "#E65100", fontSize: "0.875rem", marginBottom: "0.5rem" }}>
+            ⚠️ {lowStockProducts.length} product{lowStockProducts.length > 1 ? "s" : ""} low on stock (≤{LOW_STOCK_THRESHOLD} units)
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {lowStockProducts.map((p) => (
+              <span
+                key={p.id}
+                onClick={() => router.push(`/admin/products/${p.id}/edit`)}
+                style={{ background: Number(p.countInStock) === 0 ? "#FFCDD2" : "#FFECB3", color: Number(p.countInStock) === 0 ? "#B71C1C" : "#E65100", borderRadius: 6, padding: "0.2rem 0.6rem", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer" }}
+              >
+                {p.name} — {Number(p.countInStock) === 0 ? "Out of Stock" : `${p.countInStock} left`}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #E0E0E0", overflow: "hidden" }}>

@@ -7,6 +7,8 @@ import {
   MdAttachMoney,
   MdInventory,
   MdPeople,
+  MdTrendingUp,
+  MdWarning,
 } from "react-icons/md";
 import adminAxios from "../utils/adminAxios";
 
@@ -119,6 +121,7 @@ function StatusBadge({ status }) {
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [lowStock, setLowStock] = useState([]);
   const [statsLoading, setStatsLoading] = useState(true);
   const [ordersLoading, setOrdersLoading] = useState(true);
 
@@ -134,6 +137,14 @@ export default function Dashboard() {
       .then((res) => setOrders(res.data.orders || []))
       .catch(console.error)
       .finally(() => setOrdersLoading(false));
+
+    adminAxios
+      .get("/api/product?perPage=50&sort=stock_asc")
+      .then((res) => {
+        const prods = res.data.products || [];
+        setLowStock(prods.filter((p) => Number(p.countInStock) <= 5));
+      })
+      .catch(() => null);
   }, []);
 
   return (
@@ -181,6 +192,20 @@ export default function Dashboard() {
           value={stats?.totalUsers ?? "—"}
           icon={<MdPeople />}
           accent="#F59E0B"
+          loading={statsLoading}
+        />
+        <StatCard
+          label="Avg Order Value"
+          value={stats ? inr(stats.aov) : "—"}
+          icon={<MdTrendingUp />}
+          accent="#0097A7"
+          loading={statsLoading}
+        />
+        <StatCard
+          label="Low Stock Products"
+          value={stats?.lowStockCount ?? "—"}
+          icon={<MdWarning />}
+          accent="#E53935"
           loading={statsLoading}
         />
       </div>
@@ -346,6 +371,28 @@ export default function Dashboard() {
           View All Orders
         </Link>
       </div>
+
+      {/* ── Inventory Alerts ────────────────────────── */}
+      {lowStock.length > 0 && (
+        <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #FFB74D", overflow: "hidden", marginTop: "1.5rem" }}>
+          <div style={{ padding: "0.875rem 1.25rem", background: "#FFF3E0", borderBottom: "1px solid #FFB74D", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontWeight: 700, color: "#E65100", fontSize: "0.9rem" }}>
+              ⚠️ Inventory Alerts — {lowStock.length} product{lowStock.length > 1 ? "s" : ""} need restocking
+            </span>
+            <Link href="/admin/products" style={{ fontSize: "0.8rem", color: "#1565C0", fontWeight: 600, textDecoration: "none" }}>
+              Manage Inventory →
+            </Link>
+          </div>
+          <div style={{ padding: "0.75rem 1.25rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {lowStock.map((p) => (
+              <Link key={p.id} href={`/admin/products/${p.id}/edit`}
+                style={{ background: Number(p.countInStock) === 0 ? "#FFCDD2" : "#FFECB3", color: Number(p.countInStock) === 0 ? "#B71C1C" : "#E65100", borderRadius: 6, padding: "0.25rem 0.75rem", fontSize: "0.78rem", fontWeight: 600, textDecoration: "none", display: "inline-block" }}>
+                {p.name} — {Number(p.countInStock) === 0 ? "Out of Stock" : `${p.countInStock} left`}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

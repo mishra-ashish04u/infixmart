@@ -56,7 +56,7 @@ async function dispatchNativeRoute(request, segments) {
   if (request.method === "PUT" && first && second === "status") {
     const adminId = await requireAdminRequest(request);
     const body = await parseJson(request);
-    const result = await updateOrderStatus(first, body?.status);
+    const result = await updateOrderStatus(first, body?.status, body?.trackingNumber || null, body?.courierName || null);
     const fwd = request.headers.get("x-forwarded-for");
     const ip = fwd ? fwd.split(",")[0].trim() : (request.headers.get("x-real-ip") || null);
     await writeAuditLog({ adminId, action: "UPDATE", entity: "order", entityId: first, detail: `Order status changed to ${body?.status}`, ip });

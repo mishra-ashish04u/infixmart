@@ -8,7 +8,6 @@ import { IoClose } from 'react-icons/io5';
 import { FaStar, FaBox } from 'react-icons/fa';
 import { FiFilter, FiX } from 'react-icons/fi';
 import { MdOutlineShoppingCart } from 'react-icons/md';
-import Pagination from '@mui/material/Pagination';
 import { getData } from '../../utils/api';
 import ProductItem from '../../components/ProductItem';
 import ProductCardSkeleton from '../../components/skeletons/ProductCardSkeleton';
@@ -49,6 +48,7 @@ const FilterPanel = ({
   minPrice, maxPrice, setMinPrice, setMaxPrice, applyPrice, appliedMin, appliedMax,
   selectedRating, setSelectedRating,
   inStockOnly, setInStockOnly,
+  brands, selectedBrand, setSelectedBrand,
   clearFilters,
   onDone,
 }) => (
@@ -92,6 +92,26 @@ const FilterPanel = ({
         ))}
       </div>
     </div>
+
+    {/* Brand */}
+    {brands.length > 0 && (
+      <div>
+        <h4 className='text-[11px] font-[700] uppercase tracking-wide text-gray-400 mb-3'>Brand</h4>
+        <div className='space-y-1.5 max-h-[180px] overflow-y-auto pr-1'>
+          {brands.map(b => (
+            <label key={b} className='flex items-center gap-2.5 cursor-pointer group'>
+              <input
+                type='checkbox'
+                checked={selectedBrand === b}
+                onChange={() => setSelectedBrand(prev => prev === b ? '' : b)}
+                className='accent-[#1565C0] w-4 h-4'
+              />
+              <span className='text-[13px] text-gray-700 group-hover:text-[#1565C0] transition-colors'>{b}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    )}
 
     {/* Price range */}
     <div>
@@ -185,13 +205,17 @@ const ProductListing = () => {
   const [appliedMax, setAppliedMax]         = useState(searchParams.get('maxPrice') || '');
   const [selectedRating, setSelectedRating] = useState(null);
   const [inStockOnly, setInStockOnly]       = useState(false);
+  const [selectedBrand, setSelectedBrand]   = useState('');
   const [sortBy, setSortBy]                 = useState('newest');
   const [viewMode, setViewMode]             = useState('grid');
   const [page, setPage]                     = useState(1);
+  const [loadingMore, setLoadingMore]       = useState(false);
 
   const [products, setProducts]         = useState(null);
   const [totalPages, setTotalPages]     = useState(1);
+  const [totalCount, setTotalCount]     = useState(0);
   const [categories, setCategories]     = useState([]);
+  const [brands, setBrands]             = useState([]);
 
   const PER_PAGE = 20;
 
@@ -199,40 +223,61 @@ const ProductListing = () => {
     getData('/api/category').then(res => {
       if (res && !res.error) setCategories(res.categories || []);
     });
+    getData('/api/product/brands').then(res => {
+      if (res && !res.error) setBrands(res.brands || []);
+    });
   }, []);
 
-  const fetchProducts = useCallback(() => {
-    setProducts(null);
-    const params = new URLSearchParams({
-      page: String(page),
-      perPage: String(PER_PAGE),
-    });
-
+  const buildParams = useCallback((p = 1) => {
+    const params = new URLSearchParams({ page: String(p), perPage: String(PER_PAGE) });
     if (selectedCatId) params.set('category', selectedCatId);
     if (appliedMin !== '') params.set('minPrice', appliedMin);
     if (appliedMax !== '') params.set('maxPrice', appliedMax);
     if (selectedRating) params.set('minRating', String(selectedRating));
     if (inStockOnly) params.set('inStockOnly', 'true');
+    if (selectedBrand) params.set('brand', selectedBrand);
     if (sortBy && sortBy !== 'newest') params.set('sort', sortBy);
     const search = searchParams.get('search');
     if (search) params.set('search', search);
+    return params;
+  }, [selectedCatId, appliedMin, appliedMax, selectedRating, inStockOnly, selectedBrand, sortBy, searchParams]);
 
-    getData(`/api/product?${params.toString()}`).then(res => {
+  // Fresh fetch (filter/sort change) — resets list
+  const fetchProducts = useCallback(() => {
+    setProducts(null);
+    setPage(1);
+    getData(`/api/product?${buildParams(1).toString()}`).then(res => {
       if (res && !res.error) {
         setProducts(res.products || []);
         setTotalPages(res.totalPages || 1);
+        setTotalCount(res.totalProducts || (res.products || []).length);
       } else {
         setProducts([]);
       }
     });
-  }, [page, selectedCatId, appliedMin, appliedMax, selectedRating, inStockOnly, sortBy, searchParams]);
+  }, [buildParams]);
+
+  // Load more — appends to existing list
+  const handleLoadMore = useCallback(() => {
+    const nextPage = page + 1;
+    setLoadingMore(true);
+    getData(`/api/product?${buildParams(nextPage).toString()}`).then(res => {
+      if (res && !res.error) {
+        setProducts(prev => [...(prev || []), ...(res.products || [])]);
+        setPage(nextPage);
+        setTotalPages(res.totalPages || 1);
+        setTotalCount(res.totalProducts || 0);
+      }
+      setLoadingMore(false);
+    });
+  }, [page, buildParams]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const clearFilters = () => {
     setSelectedCatId(''); setMinPrice(''); setMaxPrice('');
     setAppliedMin(''); setAppliedMax(''); setSelectedRating(null);
-    setInStockOnly(false); setSortBy('newest'); setPage(1);
+    setInStockOnly(false); setSelectedBrand(''); setSortBy('newest'); setPage(1);
     router.push(pathname);
   };
 
@@ -278,6 +323,7 @@ const ProductListing = () => {
     (appliedMin || appliedMax) && { key: 'price', label: `Price: ₹${appliedMin || '0'} – ₹${appliedMax || '∞'}`, clear: () => { setMinPrice(''); setMaxPrice(''); setAppliedMin(''); setAppliedMax(''); setPage(1); } },
     selectedRating && { key: 'rating', label: `${selectedRating}★ & up`, clear: () => setSelectedRating(null) },
     inStockOnly && { key: 'stock', label: 'In Stock Only', clear: () => setInStockOnly(false) },
+    selectedBrand && { key: 'brand', label: `Brand: ${selectedBrand}`, clear: () => setSelectedBrand('') },
     searchQuery && { key: 'search', label: `Search: "${searchQuery}"`, clear: () => { const p = new URLSearchParams(searchParams.toString()); p.delete('search'); router.push(p.toString() ? `${pathname}?${p.toString()}` : pathname); } },
   ].filter(Boolean);
 
@@ -286,6 +332,7 @@ const ProductListing = () => {
     minPrice, maxPrice, setMinPrice, setMaxPrice, applyPrice, appliedMin, appliedMax,
     selectedRating, setSelectedRating,
     inStockOnly, setInStockOnly,
+    brands, selectedBrand, setSelectedBrand,
     clearFilters,
   };
 
@@ -461,16 +508,22 @@ const ProductListing = () => {
               </div>
             )}
 
-            {/* Pagination */}
-            {!isLoading && totalPages > 1 && (
-              <div className='flex justify-center mt-8'>
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={(_, v) => { setPage(v); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                  showFirstButton showLastButton
-                  sx={{ '& .MuiPaginationItem-root.Mui-selected': { background: '#1565C0', color: '#fff' } }}
-                />
+            {/* Load More */}
+            {!isLoading && products && (
+              <div className='flex flex-col items-center gap-3 mt-8'>
+                <p className='text-[13px] text-gray-500'>
+                  Showing <span className='font-[700] text-gray-800'>{products.length}</span>
+                  {totalCount > 0 && <> of <span className='font-[700] text-gray-800'>{totalCount}</span></>} products
+                </p>
+                {page < totalPages && (
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className='px-8 py-3 border-2 border-[#1565C0] text-[#1565C0] font-[700] text-[14px] rounded-xl hover:bg-[#1565C0] hover:text-white transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed'
+                  >
+                    {loadingMore ? 'Loading…' : 'Load More Products'}
+                  </button>
+                )}
               </div>
             )}
           </div>

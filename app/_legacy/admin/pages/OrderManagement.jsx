@@ -108,17 +108,23 @@ function AdminOrderTimeline({ status }) {
 
 // ── Expanded accordion row ────────────────────────────────────────────────────
 function OrderDetail({ order, onStatusUpdated }) {
-  const [newStatus, setNewStatus] = useState(order.status);
-  const [updating, setUpdating] = useState(false);
+  const [newStatus, setNewStatus]         = useState(order.status);
+  const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber || "");
+  const [courierName, setCourierName]     = useState(order.courierName || "");
+  const [updating, setUpdating]           = useState(false);
   const addr = order.shippingAddress || {};
   let items = [];
   try { items = Array.isArray(order.items) ? order.items : JSON.parse(order.items || "[]"); } catch {}
 
   const handleUpdate = async () => {
-    if (newStatus === order.status) return;
+    if (newStatus === order.status && !trackingNumber && !courierName) return;
     setUpdating(true);
     try {
-      await adminAxios.put(`/api/order/${order.id}/status`, { status: newStatus });
+      await adminAxios.put(`/api/order/${order.id}/status`, {
+        status: newStatus,
+        trackingNumber: trackingNumber || null,
+        courierName: courierName || null,
+      });
       toast.success(`Status updated to "${newStatus}"`);
       onStatusUpdated(order.id, newStatus);
     } catch (err) {
@@ -169,7 +175,7 @@ function OrderDetail({ order, onStatusUpdated }) {
           </div>
 
           {/* Status update */}
-          <div style={{ minWidth: 180 }}>
+          <div style={{ minWidth: 200 }}>
             <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#1A237E", marginBottom: "0.6rem", textTransform: "uppercase", letterSpacing: 0.5 }}>Update Status</p>
             <select
               value={newStatus}
@@ -180,12 +186,33 @@ function OrderDetail({ order, onStatusUpdated }) {
                 <option key={s} value={s} style={{ textTransform: "capitalize" }}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
               ))}
             </select>
+
+            {/* Tracking fields — visible when status is shipped */}
+            {(newStatus === "shipped" || order.status === "shipped") && (
+              <div style={{ marginBottom: "0.6rem", display: "flex", flexDirection: "column", gap: 6 }}>
+                <input
+                  type="text"
+                  placeholder="Tracking number"
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  style={{ width: "100%", padding: "0.45rem 0.65rem", border: "1px solid #ddd", borderRadius: 6, fontSize: "0.825rem", outline: "none", boxSizing: "border-box" }}
+                />
+                <input
+                  type="text"
+                  placeholder="Courier name (e.g. Delhivery)"
+                  value={courierName}
+                  onChange={(e) => setCourierName(e.target.value)}
+                  style={{ width: "100%", padding: "0.45rem 0.65rem", border: "1px solid #ddd", borderRadius: 6, fontSize: "0.825rem", outline: "none", boxSizing: "border-box" }}
+                />
+              </div>
+            )}
+
             <button
               onClick={handleUpdate}
-              disabled={updating || newStatus === order.status}
+              disabled={updating}
               style={{
-                width: "100%", padding: "0.55rem", background: updating || newStatus === order.status ? "#90CAF9" : "#1565C0",
-                color: "#fff", border: "none", borderRadius: 6, cursor: updating || newStatus === order.status ? "not-allowed" : "pointer",
+                width: "100%", padding: "0.55rem", background: updating ? "#90CAF9" : "#1565C0",
+                color: "#fff", border: "none", borderRadius: 6, cursor: updating ? "not-allowed" : "pointer",
                 fontWeight: 500, fontSize: "0.875rem",
               }}
             >
@@ -210,6 +237,27 @@ export default function OrderManagement() {
   const [totalOrders, setTotalOrders] = useState(0);
   const [expanded, setExpanded] = useState(null);
   const debounceRef = useRef(null);
+  const [exportFrom, setExportFrom] = useState("");
+  const [exportTo, setExportTo] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (exportFrom) params.set("from", exportFrom);
+      if (exportTo)   params.set("to", exportTo);
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      const res = await adminAxios.get(`/api/admin/export/orders?${params}`, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `orders-${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { toast.error("Export failed"); }
+    finally { setExporting(false); }
+  };
 
   const loadOrders = async (p = 1, status = "all", q = "") => {
     setLoading(true);
@@ -260,15 +308,27 @@ export default function OrderManagement() {
           Orders
           <span style={{ fontWeight: 400, color: "#999", fontSize: "0.875rem", marginLeft: 8 }}>({totalOrders} total)</span>
         </h2>
-        {/* Search */}
-        <div style={{ position: "relative" }}>
-          <MdSearch style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#999", fontSize: "1.1rem" }} />
-          <input
-            value={searchInput}
-            onChange={handleSearchChange}
-            placeholder="Search by ID or customer…"
-            style={{ padding: "0.55rem 0.875rem 0.55rem 2rem", border: "1px solid #ddd", borderRadius: 6, fontSize: "0.875rem", outline: "none", width: 230 }}
-          />
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          {/* Date range */}
+          <input type="date" value={exportFrom} onChange={(e) => setExportFrom(e.target.value)}
+            style={{ padding: "0.45rem 0.6rem", border: "1px solid #ddd", borderRadius: 6, fontSize: "0.8rem", outline: "none" }} />
+          <span style={{ fontSize: "0.8rem", color: "#999" }}>–</span>
+          <input type="date" value={exportTo} onChange={(e) => setExportTo(e.target.value)}
+            style={{ padding: "0.45rem 0.6rem", border: "1px solid #ddd", borderRadius: 6, fontSize: "0.8rem", outline: "none" }} />
+          <button onClick={handleExport} disabled={exporting}
+            style={{ padding: "0.45rem 0.9rem", background: "#00A651", color: "#fff", border: "none", borderRadius: 6, fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", opacity: exporting ? 0.6 : 1 }}>
+            {exporting ? "…" : "⬇ Export CSV"}
+          </button>
+          {/* Search */}
+          <div style={{ position: "relative" }}>
+            <MdSearch style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#999", fontSize: "1.1rem" }} />
+            <input
+              value={searchInput}
+              onChange={handleSearchChange}
+              placeholder="Search by ID or customer…"
+              style={{ padding: "0.55rem 0.875rem 0.55rem 2rem", border: "1px solid #ddd", borderRadius: 6, fontSize: "0.875rem", outline: "none", width: 200 }}
+            />
+          </div>
         </div>
       </div>
 

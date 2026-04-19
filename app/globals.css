@@ -7,6 +7,60 @@ body {
   margin: 0;
 }
 
+/* ── Dark mode base ───────────────────────────────────────── */
+.dark body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+.dark header {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark footer {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark .bg-white {
+  background-color: #1e293b !important;
+}
+
+.dark .bg-\[\#F5F7FF\] {
+  background-color: #0f172a !important;
+}
+
+.dark .border-gray-100,
+.dark .border-gray-200 {
+  border-color: #334155 !important;
+}
+
+.dark .text-gray-800,
+.dark .text-gray-900 {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-gray-500,
+.dark .text-gray-600,
+.dark .text-gray-700 {
+  color: #94a3b8 !important;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  border-color: #334155;
+}
+
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-xl {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5) !important;
+}
+
 /*
   Tailwind preflight resets <button> to have no cursor.
   MUI relies on pointer being set, so restore it here globally.

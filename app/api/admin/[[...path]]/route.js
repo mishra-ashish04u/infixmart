@@ -4,11 +4,14 @@ import { requireAccessUserId } from "../../../../lib/server/auth/session.js";
 import { writeAuditLog } from "../../../../lib/server/repositories/audit.js";
 import {
   adminLogin,
+  exportOrdersCsv,
   getAllOrdersAdmin,
   getAllUsers,
   getDashboardStats,
   getSingleUserStats,
   requireAdmin,
+  requireManagerOrAbove,
+  requireSuperAdmin,
   sendAdminTestEmail,
   updateUserStatus,
 } from "../../../../lib/server/services/admin.js";
@@ -56,6 +59,18 @@ async function requireAdminRequest(request) {
   return userId;
 }
 
+async function requireSuperAdminRequest(request) {
+  const userId = requireAccessUserId(request);
+  await requireSuperAdmin(userId);
+  return userId;
+}
+
+async function requireManagerRequest(request) {
+  const userId = requireAccessUserId(request);
+  await requireManagerOrAbove(userId);
+  return userId;
+}
+
 function getIp(request) {
   const fwd = request.headers.get("x-forwarded-for");
   return fwd ? fwd.split(",")[0].trim() : (request.headers.get("x-real-ip") || null);
@@ -76,6 +91,21 @@ async function dispatchNativeRoute(request, segments) {
     return ok(await getDashboardStats());
   }
 
+  if (request.method === "GET" && first === "export" && second === "orders") {
+    await requireAdminRequest(request);
+    const { searchParams } = new URL(request.url);
+    const from = searchParams.get("from") || "";
+    const to = searchParams.get("to") || "";
+    const status = searchParams.get("status") || "";
+    const csv = await exportOrdersCsv({ from, to, status });
+    return new Response(csv, {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="orders-export-${Date.now()}.csv"`,
+      },
+    });
+  }
+
   if (request.method === "GET" && first === "orders") {
     await requireAdminRequest(request);
     const { searchParams } = new URL(request.url);
@@ -91,7 +121,8 @@ async function dispatchNativeRoute(request, segments) {
     const page = Number(searchParams.get("page") || 1);
     const perPage = Number(searchParams.get("perPage") || 20);
     const search = searchParams.get("search") || "";
-    return ok(await getAllUsers({ page, perPage, search }));
+    const segment = searchParams.get("segment") || "";
+    return ok(await getAllUsers({ page, perPage, search, segment }));
   }
 
   if (request.method === "PUT" && first === "users" && second && third === "status") {
@@ -119,7 +150,7 @@ async function dispatchNativeRoute(request, segments) {
   }
 
   if (request.method === "PUT" && first === "settings" && !second) {
-    const adminId = await requireAdminRequest(request);
+    const adminId = await requireSuperAdminRequest(request);
     const body = await parseJson(request);
     const result = await saveSetting(body);
     await writeAuditLog({ adminId, action: "UPDATE", entity: "settings", detail: `Settings updated`, ip: getIp(request) });

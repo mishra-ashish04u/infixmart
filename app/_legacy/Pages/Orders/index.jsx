@@ -6,7 +6,7 @@ import { LuClipboardCheck } from 'react-icons/lu';
 import EmptyState from '../../components/EmptyState';
 import { FaAngleDown, FaAngleUp, FaUndo, FaCheck } from 'react-icons/fa';
 import { MdReceiptLong } from 'react-icons/md';
-import { MdLocalShipping, MdCheckCircle, MdInventory, MdCancel } from 'react-icons/md';
+import { MdLocalShipping, MdCheckCircle, MdInventory, MdCancel, MdOpenInNew } from 'react-icons/md';
 import { getData, postData } from '../../utils/api';
 import { imgUrl } from '../../utils/imageUrl';
 import OrderCardSkeleton from '../../components/skeletons/OrderCardSkeleton';
@@ -104,6 +104,24 @@ const OrderTimeline = ({ status, createdAt }) => {
     </div>
   );
 };
+
+const COURIER_TRACKING = {
+  delhivery:   (n) => `https://www.delhivery.com/track/package/${n}`,
+  bluedart:    (n) => `https://www.bluedart.com/tracking?trackFor=0&trackNum=${n}`,
+  ekart:       (n) => `https://ekartlogistics.com/shipmenttrack/${n}`,
+  dtdc:        (n) => `https://tracking.dtdc.com/ctbs-tracking/customerInterface.tr?submitName=Tracking&cnNo=${n}`,
+  fedex:       (n) => `https://www.fedex.com/fedextrack/?trknbr=${n}`,
+  xpressbees:  (n) => `https://www.xpressbees.com/shipment/tracking?awb=${n}`,
+  shadowfax:   (n) => `https://track.shadowfax.in/?awb=${n}`,
+  ecom:        (n) => `https://ecomexpress.in/tracking/?awb_field=${n}`,
+};
+
+function getCourierTrackingUrl(courierName, trackingNumber) {
+  if (!courierName || !trackingNumber) return '#';
+  const key = courierName.toLowerCase().replace(/\s+/g, '');
+  const match = Object.entries(COURIER_TRACKING).find(([k]) => key.includes(k));
+  return match ? match[1](trackingNumber) : `https://www.google.com/search?q=${encodeURIComponent(courierName + ' tracking ' + trackingNumber)}`;
+}
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -277,6 +295,28 @@ const Orders = () => {
                       {/* Expanded items */}
                       {isOpen && (
                         <div className="mt-4">
+                          {/* Tracking banner — only when shipped + tracking info available */}
+                          {order.status === 'shipped' && order.trackingNumber && (
+                            <div className="mb-3 flex items-center justify-between gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex-wrap">
+                              <div className="flex items-center gap-2">
+                                <MdLocalShipping className="text-[#1565C0] text-[20px] flex-shrink-0" />
+                                <div>
+                                  <p className="text-[12px] font-[700] text-[#1565C0]">
+                                    {order.courierName || 'Courier'} — {order.trackingNumber}
+                                  </p>
+                                  <p className="text-[11px] text-gray-500">Your order is on its way</p>
+                                </div>
+                              </div>
+                              <a
+                                href={getCourierTrackingUrl(order.courierName, order.trackingNumber)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-[12px] font-[700] text-[#1565C0] hover:underline whitespace-nowrap"
+                              >
+                                Track Shipment <MdOpenInNew className="text-[13px]" />
+                              </a>
+                            </div>
+                          )}
                           <OrderTimeline status={order.status} createdAt={order.createdAt} />
                         </div>
                       )}

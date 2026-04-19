@@ -1,4 +1,34 @@
 import { fileURLToPath } from "url";
+import withPWAInit from "next-pwa";
+
+const withPWA = withPWAInit({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+  register: true,
+  skipWaiting: true,
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/fonts\.(gstatic|googleapis)\.com\/.*/i,
+      handler: "CacheFirst",
+      options: { cacheName: "google-fonts", expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 } },
+    },
+    {
+      urlPattern: /\/api\/product($|\?)/,
+      handler: "NetworkFirst",
+      options: { cacheName: "api-products", expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 } },
+    },
+    {
+      urlPattern: /\/uploads\/.*/i,
+      handler: "CacheFirst",
+      options: { cacheName: "uploads", expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 7 } },
+    },
+    {
+      urlPattern: /\/_next\/static\/.*/i,
+      handler: "CacheFirst",
+      options: { cacheName: "next-static", expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 365 } },
+    },
+  ],
+});
 
 const reactRouterCompatPath = fileURLToPath(
   new URL("./app/_legacy/compat/react-router-dom.js", import.meta.url)
@@ -140,4 +170,4 @@ const nextConfig = {
   poweredByHeader: false,
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

@@ -94,6 +94,10 @@ export const CartProvider = ({ children, enabled = true }) => {
           style: { background: '#1565C0', color: '#fff' },
           duration: 2000,
         });
+        if (typeof window !== 'undefined') {
+          window.gtag?.('event', 'add_to_cart', { items: [{ item_id: productId }] });
+          window.fbq?.('track', 'AddToCart', { content_ids: [productId], content_type: 'product' });
+        }
         fetchCart();
       } else {
         toast.error(res?.message === 'Unauthorized' ? 'Please login to add items to cart' : (res?.message || 'Could not add to cart'));
