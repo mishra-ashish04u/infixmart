@@ -144,9 +144,10 @@ const Referral = () => {
       <div className="container max-w-2xl mx-auto">
         <h1 className="text-[24px] font-[800] text-gray-900 mb-2">Refer & Earn</h1>
         <p className="text-[14px] text-gray-500 mb-8">
-          Share your referral link. Both you and your friend get{" "}
-          <span className="font-[700] text-[#1565C0]">₹{REFERRAL_REWARD} wallet credit</span> when they
-          place their first order.
+          Share your link — your friend gets{" "}
+          <span className="font-[700] text-[#1565C0]">₹{REFERRAL_REWARD} off</span> on their first order,
+          and you earn{" "}
+          <span className="font-[700] text-[#1565C0]">₹{REFERRAL_REWARD} wallet credit</span> once they purchase.
         </p>
 
         {/* Wallet balance */}
@@ -204,9 +205,9 @@ const Referral = () => {
           <div className="flex flex-col gap-3">
             {[
               { step: "1", text: "Share your referral link with friends" },
-              { step: "2", text: "Friend registers using your link" },
+              { step: "2", text: `Friend registers & gets ₹${REFERRAL_REWARD} off instantly` },
               { step: "3", text: "Friend places their first order" },
-              { step: "4", text: `Both of you get ₹${REFERRAL_REWARD} wallet credit instantly` },
+              { step: "4", text: `You earn ₹${REFERRAL_REWARD} wallet credit` },
             ].map(({ step, text }) => (
               <div key={step} className="flex items-center gap-3">
                 <span className="w-7 h-7 rounded-full bg-[#EEF4FF] text-[#1565C0] text-[12px] font-[800] flex items-center justify-center flex-shrink-0">
