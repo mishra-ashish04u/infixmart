@@ -1,13 +1,117 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { getData } from "../../utils/api";
+import { getData, postData, putData } from "../../utils/api";
+import toast from "react-hot-toast";
 
 const REFERRAL_REWARD = 50;
+const PRESET_AMOUNTS = [100, 250, 500, 1000];
+
+function AddMoneyModal({ onClose, onSuccess }) {
+  const [amount, setAmount] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const loadRazorpay = () => new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
+
+  const handlePay = async () => {
+    const amt = Number(amount);
+    if (!amt || amt < 10) return toast.error("Minimum ₹10");
+    if (amt > 50000) return toast.error("Maximum ₹50,000");
+    setLoading(true);
+    const ready = await loadRazorpay();
+    if (!ready) { toast.error("Payment gateway failed to load"); setLoading(false); return; }
+    try {
+      const res = await postData("/api/wallet", { amount: amt });
+      if (res.error || !res.orderId) { toast.error(res.message || "Failed to create order"); setLoading(false); return; }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: amt * 100,
+        currency: "INR",
+        name: "InfixMart",
+        description: "Wallet Top-up",
+        order_id: res.orderId,
+        handler: async (response) => {
+          const verify = await putData("/api/wallet", response);
+          if (verify.success) {
+            toast.success(`₹${amt} added to wallet!`);
+            onSuccess(verify.walletBalance);
+            onClose();
+          } else {
+            toast.error("Payment verification failed");
+          }
+        },
+        prefill: {},
+        theme: { color: "#1565C0" },
+        modal: { ondismiss: () => setLoading(false) },
+      };
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch {
+      toast.error("Something went wrong");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-6 shadow-2xl z-10">
+        <h3 className="text-[16px] font-[800] text-gray-900 mb-1">Add Money to Wallet</h3>
+        <p className="text-[12px] text-gray-400 mb-5">Credited instantly. Use at checkout.</p>
+
+        {/* Preset amounts */}
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          {PRESET_AMOUNTS.map((a) => (
+            <button
+              key={a}
+              onClick={() => setAmount(String(a))}
+              className={`py-2 rounded-xl text-[13px] font-[700] border transition-all ${
+                Number(amount) === a
+                  ? "bg-[#1565C0] text-white border-[#1565C0]"
+                  : "bg-[#F5F7FF] text-gray-700 border-transparent hover:border-[#1565C0]"
+              }`}
+            >
+              ₹{a}
+            </button>
+          ))}
+        </div>
+
+        {/* Custom amount */}
+        <div className="relative mb-5">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-[700]">₹</span>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Enter amount"
+            className="w-full pl-8 pr-4 py-3 bg-[#F8FAFF] border border-gray-200 rounded-xl text-[15px] font-[700] text-gray-800 outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/10"
+          />
+        </div>
+
+        <button
+          onClick={handlePay}
+          disabled={loading || !amount}
+          className="w-full py-3 bg-[#1565C0] text-white font-[800] text-[15px] rounded-xl hover:bg-[#1251A3] disabled:opacity-60 transition-colors"
+        >
+          {loading ? "Opening payment…" : `Pay ₹${amount || "0"}`}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const Referral = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [showAddMoney, setShowAddMoney] = useState(false);
 
   useEffect(() => {
     getData("/api/referral")
@@ -47,12 +151,29 @@ const Referral = () => {
 
         {/* Wallet balance */}
         <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-6 shadow-sm">
-          <p className="text-[12px] font-[700] uppercase tracking-widest text-gray-400 mb-1">Wallet Balance</p>
-          <p className="text-[36px] font-[900] text-[#1565C0] leading-none">
-            ₹{loading ? "—" : Number(data?.walletBalance || 0).toLocaleString("en-IN")}
-          </p>
-          <p className="text-[12px] text-gray-400 mt-1">Automatically applied at checkout</p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-[700] uppercase tracking-widest text-gray-400 mb-1">Wallet Balance</p>
+              <p className="text-[36px] font-[900] text-[#1565C0] leading-none">
+                ₹{loading ? "—" : Number(data?.walletBalance || 0).toLocaleString("en-IN")}
+              </p>
+              <p className="text-[12px] text-gray-400 mt-1">Automatically applied at checkout</p>
+            </div>
+            <button
+              onClick={() => setShowAddMoney(true)}
+              className="flex-shrink-0 px-4 py-2 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors whitespace-nowrap"
+            >
+              + Add Money
+            </button>
+          </div>
         </div>
+
+        {showAddMoney && (
+          <AddMoneyModal
+            onClose={() => setShowAddMoney(false)}
+            onSuccess={(newBalance) => setData((d) => ({ ...d, walletBalance: newBalance }))}
+          />
+        )}
 
         {/* Referral link */}
         <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-6 shadow-sm">

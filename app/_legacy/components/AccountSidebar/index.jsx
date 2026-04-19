@@ -56,7 +56,7 @@ const AccountSidebar = () => {
   };
 
   return (
-    <div className="sticky bg-white rounded-lg shadow-sm border border-[rgba(0,0,0,0.08)] card top-[80px]">
+    <div className="sticky bg-white rounded-lg shadow-sm border border-[rgba(0,0,0,0.08)] card top-[80px] pb-20 md:pb-0">
       {/* Avatar */}
       <div className="flex flex-col items-center justify-center w-full p-5 border-b border-gray-100">
         <div className="w-[90px] h-[90px] mb-3 rounded-full relative overflow-hidden group flex items-center justify-center bg-gray-100">

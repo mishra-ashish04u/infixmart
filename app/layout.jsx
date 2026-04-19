@@ -120,6 +120,8 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body suppressHydrationWarning>
+        {/* Suppress PWA install prompt — keep push notifications only */}
+        <script dangerouslySetInnerHTML={{ __html: `window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();});` }} />
 
         {/* ── Google Analytics 4 ── */}
         {GA4_ID && (

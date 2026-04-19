@@ -3,93 +3,53 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  MdShoppingBag,
-  MdAttachMoney,
-  MdInventory,
-  MdPeople,
-  MdTrendingUp,
-  MdWarning,
+  MdShoppingBag, MdAttachMoney, MdInventory, MdPeople,
+  MdTrendingUp, MdWarning, MdAdd, MdArrowForward,
+  MdCheckCircle, MdLocalShipping, MdPendingActions, MdCancel,
 } from "react-icons/md";
 import adminAxios from "../utils/adminAxios";
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
 const inr = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
+const fmt = (d) => new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 
-const fmt = (dateStr) =>
-  new Date(dateStr).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-
-const STATUS_STYLES = {
-  pending:    { background: "#E0E0E0", color: "#555" },
-  processing: { background: "#1565C0", color: "#fff" },
-  shipped:    { background: "#FEF3C7", color: "#92400E", border: "1px solid #F59E0B" },
-  delivered:  { background: "#E8F5E9", color: "#2E7D32", border: "1px solid #00A651" },
-  cancelled:  { background: "#FFEBEE", color: "#C62828" },
+const STATUS_CFG = {
+  pending:    { label: "Pending",    bg: "bg-gray-100",   text: "text-gray-600",   icon: MdPendingActions },
+  processing: { label: "Processing", bg: "bg-blue-100",   text: "text-blue-700",   icon: MdShoppingBag },
+  shipped:    { label: "Shipped",    bg: "bg-amber-100",  text: "text-amber-700",  icon: MdLocalShipping },
+  delivered:  { label: "Delivered",  bg: "bg-green-100",  text: "text-green-700",  icon: MdCheckCircle },
+  cancelled:  { label: "Cancelled",  bg: "bg-red-100",    text: "text-red-700",    icon: MdCancel },
 };
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-function Skeleton({ height = 20, width = "100%", radius = 6, style = {} }) {
+function StatusBadge({ status }) {
+  const cfg = STATUS_CFG[status] || STATUS_CFG.pending;
   return (
-    <div
-      style={{
-        height,
-        width,
-        borderRadius: radius,
-        background: "linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%)",
-        backgroundSize: "200% 100%",
-        animation: "shimmer 1.4s infinite",
-        ...style,
-      }}
-    />
+    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-[700] capitalize ${cfg.bg} ${cfg.text}`}>
+      {cfg.label}
+    </span>
   );
 }
 
-// ── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({ label, value, icon, accent, loading }) {
+function Shimmer({ h = "h-5", w = "w-full", rounded = "rounded-md" }) {
+  return <div className={`${h} ${w} ${rounded} bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse`} />;
+}
+
+function StatCard({ label, value, icon: Icon, accent, sub, loading }) {
   return (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 8,
-        border: "1px solid #E0E0E0",
-        borderLeft: `4px solid ${accent}`,
-        padding: "1.25rem 1.5rem",
-        display: "flex",
-        alignItems: "center",
-        gap: "1.25rem",
-      }}
-    >
-      <div
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: 8,
-          background: `${accent}18`,
-          color: accent,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "1.5rem",
-          flexShrink: 0,
-        }}
-      >
-        {icon}
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
+      <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${accent}18`, color: accent }}>
+        <Icon className="text-[22px]" />
       </div>
-      <div style={{ minWidth: 0 }}>
+      <div className="min-w-0 flex-1">
         {loading ? (
           <>
-            <Skeleton height={28} width={80} style={{ marginBottom: 6 }} />
-            <Skeleton height={14} width={60} />
+            <Shimmer h="h-7" w="w-20" rounded="rounded-lg" />
+            <Shimmer h="h-3.5" w="w-24" rounded="rounded" style={{ marginTop: 8 }} />
           </>
         ) : (
           <>
-            <div style={{ fontSize: "1.6rem", fontWeight: 700, color: "#1A237E", lineHeight: 1 }}>
-              {value}
-            </div>
-            <div style={{ fontSize: "0.8rem", color: "#666", marginTop: 4 }}>{label}</div>
+            <p className="text-[26px] font-[900] text-gray-800 leading-none">{value}</p>
+            <p className="text-[12px] text-gray-400 font-[500] mt-1">{label}</p>
+            {sub && <p className="text-[11px] text-gray-300 mt-0.5">{sub}</p>}
           </>
         )}
       </div>
@@ -97,49 +57,32 @@ function StatCard({ label, value, icon, accent, loading }) {
   );
 }
 
-// ── Badge ─────────────────────────────────────────────────────────────────────
-function StatusBadge({ status }) {
-  const s = STATUS_STYLES[status] || STATUS_STYLES.pending;
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "0.2rem 0.65rem",
-        borderRadius: 999,
-        fontSize: "0.75rem",
-        fontWeight: 600,
-        textTransform: "capitalize",
-        ...s,
-      }}
-    >
-      {status}
-    </span>
-  );
-}
+const QUICK_ACTIONS = [
+  { label: "Add Product",    href: "/admin/products/new",  primary: true  },
+  { label: "Add Category",   href: "/admin/categories",    primary: true  },
+  { label: "View Orders",    href: "/admin/orders",        primary: false },
+  { label: "Manage Coupons", href: "/admin/coupons",       primary: false },
+];
 
-// ── Main component ────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [stats, setStats] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [lowStock, setLowStock] = useState([]);
-  const [statsLoading, setStatsLoading] = useState(true);
+  const [stats,         setStats]         = useState(null);
+  const [orders,        setOrders]        = useState([]);
+  const [lowStock,      setLowStock]      = useState([]);
+  const [statsLoading,  setStatsLoading]  = useState(true);
   const [ordersLoading, setOrdersLoading] = useState(true);
 
   useEffect(() => {
-    adminAxios
-      .get("/api/admin/stats")
+    adminAxios.get("/api/admin/stats")
       .then((res) => setStats(res.data))
       .catch(console.error)
       .finally(() => setStatsLoading(false));
 
-    adminAxios
-      .get("/api/admin/orders?page=1&perPage=5")
+    adminAxios.get("/api/admin/orders?page=1&perPage=6")
       .then((res) => setOrders(res.data.orders || []))
       .catch(console.error)
       .finally(() => setOrdersLoading(false));
 
-    adminAxios
-      .get("/api/product?perPage=50&sort=stock_asc")
+    adminAxios.get("/api/product?perPage=50&sort=stock_asc")
       .then((res) => {
         const prods = res.data.products || [];
         setLowStock(prods.filter((p) => Number(p.countInStock) <= 5));
@@ -148,114 +91,51 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div>
-      <style>{`
-        @keyframes shimmer {
-          0%   { background-position: -200% 0; }
-          100% { background-position:  200% 0; }
-        }
-        .row-hover:hover { background: #F3F4F6 !important; }
-      `}</style>
+    <div className="space-y-6">
 
-      {/* ── Stat cards ──────────────────────────────── */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "1rem",
-          marginBottom: "1.5rem",
-        }}
-      >
-        <StatCard
-          label="Total Orders"
-          value={stats?.totalOrders ?? "—"}
-          icon={<MdShoppingBag />}
-          accent="#1565C0"
-          loading={statsLoading}
-        />
-        <StatCard
-          label="Total Revenue"
-          value={stats ? inr(stats.totalRevenue) : "—"}
-          icon={<MdAttachMoney />}
-          accent="#00A651"
-          loading={statsLoading}
-        />
-        <StatCard
-          label="Total Products"
-          value={stats?.totalProducts ?? "—"}
-          icon={<MdInventory />}
-          accent="#7B1FA2"
-          loading={statsLoading}
-        />
-        <StatCard
-          label="Total Users"
-          value={stats?.totalUsers ?? "—"}
-          icon={<MdPeople />}
-          accent="#F59E0B"
-          loading={statsLoading}
-        />
-        <StatCard
-          label="Avg Order Value"
-          value={stats ? inr(stats.aov) : "—"}
-          icon={<MdTrendingUp />}
-          accent="#0097A7"
-          loading={statsLoading}
-        />
-        <StatCard
-          label="Low Stock Products"
-          value={stats?.lowStockCount ?? "—"}
-          icon={<MdWarning />}
-          accent="#E53935"
-          loading={statsLoading}
-        />
+      {/* ── Stat Cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <StatCard label="Total Orders"       value={stats?.totalOrders    ?? "—"} icon={MdShoppingBag} accent="#1565C0" loading={statsLoading} />
+        <StatCard label="Total Revenue"      value={stats ? inr(stats.totalRevenue) : "—"} icon={MdAttachMoney} accent="#00A651" loading={statsLoading} />
+        <StatCard label="Total Products"     value={stats?.totalProducts  ?? "—"} icon={MdInventory}  accent="#7B1FA2" loading={statsLoading} />
+        <StatCard label="Total Users"        value={stats?.totalUsers     ?? "—"} icon={MdPeople}     accent="#F59E0B" loading={statsLoading} />
+        <StatCard label="Avg. Order Value"   value={stats ? inr(stats.aov) : "—"} icon={MdTrendingUp} accent="#0097A7" loading={statsLoading} />
+        <StatCard label="Low Stock Products" value={stats?.lowStockCount  ?? "—"} icon={MdWarning}    accent="#E53935" loading={statsLoading}
+          sub={stats?.lowStockCount > 0 ? "Needs restocking" : undefined} />
       </div>
 
-      {/* ── Recent orders ───────────────────────────── */}
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 8,
-          border: "1px solid #E0E0E0",
-          overflow: "hidden",
-          marginBottom: "1.5rem",
-        }}
-      >
-        <div
-          style={{
-            padding: "1rem 1.25rem",
-            borderBottom: "1px solid #E0E0E0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <h2 style={{ fontSize: "1rem", fontWeight: 600, color: "#1A237E", margin: 0 }}>
-            Recent Orders
-          </h2>
+      {/* ── Quick Actions ── */}
+      <div className="flex flex-wrap gap-2">
+        {QUICK_ACTIONS.map(({ label, href, primary }) => (
           <Link
-            href="/admin/orders"
-            style={{ fontSize: "0.8rem", color: "#1565C0", textDecoration: "none", fontWeight: 500 }}
+            key={href}
+            href={href}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-[700] transition-all ${
+              primary
+                ? "bg-[#1565C0] text-white hover:bg-[#1251A3] shadow-sm"
+                : "bg-white border border-gray-200 text-gray-700 hover:border-[#1565C0] hover:text-[#1565C0]"
+            }`}
           >
-            View all →
+            {primary && <MdAdd className="text-[16px]" />}
+            {label}
+          </Link>
+        ))}
+      </div>
+
+      {/* ── Recent Orders ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h2 className="text-[15px] font-[800] text-gray-800">Recent Orders</h2>
+          <Link href="/admin/orders" className="flex items-center gap-1 text-[12px] font-[600] text-[#1565C0] hover:underline">
+            View all <MdArrowForward className="text-[14px]" />
           </Link>
         </div>
-
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px]">
             <thead>
-              <tr style={{ background: "#F9FAFB" }}>
-                {["Order ID", "Customer", "Date", "Total", "Status", "Action"].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: "0.75rem 1rem",
-                      textAlign: "left",
-                      fontWeight: 600,
-                      color: "#555",
-                      whiteSpace: "nowrap",
-                      borderBottom: "1px solid #E0E0E0",
-                    }}
-                  >
+              <tr className="bg-[#F8FAFF]">
+                {["Order ID", "Customer", "Date", "Amount", "Status", ""].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left text-[11px] font-[700] uppercase tracking-wider text-gray-400 whitespace-nowrap border-b border-gray-100">
                     {h}
                   </th>
                 ))}
@@ -264,10 +144,10 @@ export default function Dashboard() {
             <tbody>
               {ordersLoading
                 ? Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} style={{ borderBottom: "1px solid #F0F0F0" }}>
+                    <tr key={i} className="border-b border-gray-50">
                       {Array.from({ length: 6 }).map((__, j) => (
-                        <td key={j} style={{ padding: "0.75rem 1rem" }}>
-                          <Skeleton height={14} width={j === 5 ? 50 : "80%"} />
+                        <td key={j} className="px-4 py-3">
+                          <Shimmer h="h-4" w={j === 5 ? "w-12" : "w-3/4"} />
                         </td>
                       ))}
                     </tr>
@@ -275,47 +155,23 @@ export default function Dashboard() {
                 : orders.length === 0
                 ? (
                     <tr>
-                      <td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#999" }}>
-                        No orders found.
+                      <td colSpan={6} className="px-4 py-10 text-center text-gray-400 text-[13px]">
+                        No orders yet.
                       </td>
                     </tr>
                   )
-                : orders.map((order, i) => (
-                    <tr
-                      key={order.id}
-                      className="row-hover"
-                      style={{
-                        background: i % 2 === 0 ? "#fff" : "#F9FAFB",
-                        borderBottom: "1px solid #F0F0F0",
-                        transition: "background 0.15s",
-                      }}
-                    >
-                      <td style={{ padding: "0.75rem 1rem", color: "#1565C0", fontWeight: 500 }}>
-                        #{order.id}
-                      </td>
-                      <td style={{ padding: "0.75rem 1rem", color: "#333" }}>
+                : orders.map((order) => (
+                    <tr key={order.id} className="border-b border-gray-50 hover:bg-[#F8FAFF] transition-colors">
+                      <td className="px-4 py-3 font-[700] text-[#1565C0]">#{order.id}</td>
+                      <td className="px-4 py-3 text-gray-700 max-w-[140px] truncate">
                         {order.user?.name || order.user?.email || "—"}
                       </td>
-                      <td style={{ padding: "0.75rem 1rem", color: "#555", whiteSpace: "nowrap" }}>
-                        {fmt(order.createdAt)}
-                      </td>
-                      <td style={{ padding: "0.75rem 1rem", color: "#333", fontWeight: 500 }}>
-                        {inr(order.totalPrice)}
-                      </td>
-                      <td style={{ padding: "0.75rem 1rem" }}>
-                        <StatusBadge status={order.status} />
-                      </td>
-                      <td style={{ padding: "0.75rem 1rem" }}>
-                        <Link
-                          href="/admin/orders"
-                          style={{
-                            color: "#1565C0",
-                            textDecoration: "none",
-                            fontWeight: 500,
-                            fontSize: "0.8rem",
-                          }}
-                        >
-                          View
+                      <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{fmt(order.createdAt)}</td>
+                      <td className="px-4 py-3 font-[700] text-gray-800">{inr(order.totalPrice)}</td>
+                      <td className="px-4 py-3"><StatusBadge status={order.status} /></td>
+                      <td className="px-4 py-3">
+                        <Link href="/admin/orders" className="text-[12px] font-[600] text-[#1565C0] hover:underline whitespace-nowrap">
+                          View →
                         </Link>
                       </td>
                     </tr>
@@ -325,74 +181,38 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Quick links ─────────────────────────────── */}
-      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-        <Link
-          href="/admin/products/new"
-          style={{
-            padding: "0.6rem 1.25rem",
-            background: "#1565C0",
-            color: "#fff",
-            borderRadius: 6,
-            textDecoration: "none",
-            fontWeight: 500,
-            fontSize: "0.875rem",
-          }}
-        >
-          + Add Product
-        </Link>
-        <Link
-          href="/admin/categories"
-          style={{
-            padding: "0.6rem 1.25rem",
-            background: "#1565C0",
-            color: "#fff",
-            borderRadius: 6,
-            textDecoration: "none",
-            fontWeight: 500,
-            fontSize: "0.875rem",
-          }}
-        >
-          + Add Category
-        </Link>
-        <Link
-          href="/admin/orders"
-          style={{
-            padding: "0.6rem 1.25rem",
-            background: "transparent",
-            color: "#1565C0",
-            border: "1.5px solid #1565C0",
-            borderRadius: 6,
-            textDecoration: "none",
-            fontWeight: 500,
-            fontSize: "0.875rem",
-          }}
-        >
-          View All Orders
-        </Link>
-      </div>
-
-      {/* ── Inventory Alerts ────────────────────────── */}
+      {/* ── Inventory Alerts ── */}
       {lowStock.length > 0 && (
-        <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #FFB74D", overflow: "hidden", marginTop: "1.5rem" }}>
-          <div style={{ padding: "0.875rem 1.25rem", background: "#FFF3E0", borderBottom: "1px solid #FFB74D", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontWeight: 700, color: "#E65100", fontSize: "0.9rem" }}>
-              ⚠️ Inventory Alerts — {lowStock.length} product{lowStock.length > 1 ? "s" : ""} need restocking
-            </span>
-            <Link href="/admin/products" style={{ fontSize: "0.8rem", color: "#1565C0", fontWeight: 600, textDecoration: "none" }}>
-              Manage Inventory →
+        <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3.5 bg-amber-50 border-b border-amber-200">
+            <div className="flex items-center gap-2">
+              <MdWarning className="text-amber-500 text-[20px]" />
+              <span className="text-[14px] font-[700] text-amber-800">
+                Inventory Alerts — {lowStock.length} product{lowStock.length > 1 ? "s" : ""} need restocking
+              </span>
+            </div>
+            <Link href="/admin/products" className="text-[12px] font-[600] text-[#1565C0] hover:underline">
+              Manage →
             </Link>
           </div>
-          <div style={{ padding: "0.75rem 1.25rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+          <div className="p-4 flex flex-wrap gap-2">
             {lowStock.map((p) => (
-              <Link key={p.id} href={`/admin/products/${p.id}/edit`}
-                style={{ background: Number(p.countInStock) === 0 ? "#FFCDD2" : "#FFECB3", color: Number(p.countInStock) === 0 ? "#B71C1C" : "#E65100", borderRadius: 6, padding: "0.25rem 0.75rem", fontSize: "0.78rem", fontWeight: 600, textDecoration: "none", display: "inline-block" }}>
+              <Link
+                key={p.id}
+                href={`/admin/products/${p.id}/edit`}
+                className={`text-[12px] font-[600] px-3 py-1.5 rounded-lg transition-colors ${
+                  Number(p.countInStock) === 0
+                    ? "bg-red-100 text-red-700 hover:bg-red-200"
+                    : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                }`}
+              >
                 {p.name} — {Number(p.countInStock) === 0 ? "Out of Stock" : `${p.countInStock} left`}
               </Link>
             ))}
           </div>
         </div>
       )}
+
     </div>
   );
 }

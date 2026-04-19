@@ -18,7 +18,7 @@ const QUICK_LINKS = [
   { href: "/my-orders",  icon: MdShoppingBag,        label: "My Orders",    color: "bg-blue-50 text-[#1565C0]" },
   { href: "/my-list",    icon: MdFavorite,            label: "Wishlist",     color: "bg-red-50 text-red-500" },
   { href: "/my-address", icon: MdLocationOn,          label: "Addresses",    color: "bg-green-50 text-green-600" },
-  { href: "/referral",   icon: MdCardGiftcard,        label: "Refer & Earn", color: "bg-purple-50 text-purple-600" },
+  { href: "/referral",   icon: MdAccountBalanceWallet, label: "Wallet & Refer", color: "bg-purple-50 text-purple-600" },
 ];
 
 function InputField({ label, icon: Icon, value, onChange, name, type = "text", disabled, readOnly, suffix }) {
