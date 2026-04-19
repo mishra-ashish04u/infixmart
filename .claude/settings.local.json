@@ -40,7 +40,8 @@
       "Bash(head -20 tailwind.config.ts)",
       "Bash(node -e ' *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

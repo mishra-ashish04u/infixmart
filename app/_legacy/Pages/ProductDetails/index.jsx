@@ -394,7 +394,7 @@ const QASection = ({ productId }) => {
     const res = await postData('/api/product-qa', { productId, question: question.trim() });
     setSubmitting(false);
     if (res && !res.error) {
-      toast.success('Question submitted! We'll answer soon.');
+      toast.success("Question submitted! We'll answer soon.");
       setQuestion('');
       fetchQA();
     } else {

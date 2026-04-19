@@ -4,7 +4,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import { usePathname } from "next/navigation";
 
 const HIDDEN_PATHS = ["/admin", "/checkout"];
-const WA_NUMBER = "918871488214";
+const WA_NUMBER = "918849047148";
 const WA_MESSAGE = "Hi! I need help with my order on InfixMart.";
 
 const WhatsAppButton = () => {

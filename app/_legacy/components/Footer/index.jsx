@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import NextImage from 'next/image';
 import logo from '../../assets/logo.webp';
-import { FaFacebookF, FaInstagram, FaYoutube, FaWhatsapp, FaLinkedinIn, FaTwitter } from 'react-icons/fa';
+import { FaFacebookF, FaInstagram, FaWhatsapp, FaTelegram } from 'react-icons/fa';
 import { MdLocalShipping, MdVerified, MdSupportAgent } from 'react-icons/md';
 import { FaShieldAlt, FaUndo } from 'react-icons/fa';
 import { HiOutlineMail, HiOutlinePhone } from 'react-icons/hi';
@@ -49,12 +49,10 @@ const TRUST = [
 ];
 
 const SOCIALS = [
-  { icon: <FaFacebookF />,  href: '#', label: 'Facebook'  },
-  { icon: <FaInstagram />,  href: '#', label: 'Instagram' },
-  { icon: <FaYoutube />,    href: '#', label: 'YouTube'   },
-  { icon: <FaWhatsapp />,   href: 'https://wa.me/918871488214', label: 'WhatsApp' },
-  { icon: <FaLinkedinIn />, href: '#', label: 'LinkedIn'  },
-  { icon: <FaTwitter />,    href: '#', label: 'Twitter'   },
+  { icon: <FaInstagram />, href: 'https://www.instagram.com/infixmart?igsh=MXdvcmxxMHZvY3V4bQ==', label: 'Instagram', color: '#E1306C' },
+  { icon: <FaTelegram />,  href: 'https://t.me/infixmart',                                         label: 'Telegram',  color: '#229ED9' },
+  { icon: <FaWhatsapp />,  href: 'https://whatsapp.com/channel/0029VbDEHj23rZZV38P9lv1M',         label: 'WhatsApp', color: '#25D366' },
+  { icon: <FaFacebookF />, href: 'https://www.facebook.com/share/1K4SxGDhK6/',                    label: 'Facebook',  color: '#1877F2' },
 ];
 
 const Footer = () => {
@@ -139,11 +137,11 @@ const Footer = () => {
 
           <div className='flex flex-col gap-2.5 mb-5'>
             <a
-              href='https://wa.me/918871488214'
+              href='https://wa.me/918849047148'
               className='flex items-center gap-2.5 text-[13px] text-gray-600 hover:text-[#1565C0] transition-colors'
             >
               <FaWhatsapp className='text-[#25D366] text-[16px] flex-shrink-0' />
-              +91 88714 88214
+              +91 88490 47148
             </a>
             <a
               href='mailto:support@infixmart.com'
@@ -167,7 +165,11 @@ const Footer = () => {
                 target='_blank'
                 rel='noreferrer'
                 aria-label={s.label}
-                className='w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-[#1565C0] hover:border-[#1565C0] hover:text-white transition-all duration-200 text-[13px]'
+                title={s.label}
+                className='w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:text-white transition-all duration-200 text-[15px]'
+                style={{ ['--hover-bg']: s.color }}
+                onMouseEnter={e => { e.currentTarget.style.background = s.color; e.currentTarget.style.borderColor = s.color; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.borderColor = ''; e.currentTarget.style.color = ''; }}
               >
                 {s.icon}
               </a>

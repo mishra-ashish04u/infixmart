@@ -1,12 +1,10 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { getData } from "../../utils/api";
-import { useAuth } from "../../context/AuthContext";
 
 const REFERRAL_REWARD = 50;
 
 const Referral = () => {
-  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -29,7 +27,7 @@ const Referral = () => {
     });
   };
 
-  if (!user) {
+  if (!loading && !data) {
     return (
       <section className="py-20 text-center bg-[#F5F7FF] min-h-screen">
         <p className="text-gray-500 text-[15px]">Please log in to view your referral dashboard.</p>
