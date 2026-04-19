@@ -1014,6 +1014,7 @@ const ProductDetails = () => {
 
   /* ── JSX ──────────────────────────────────────────────────────────────── */
   return (
+    <>
     <div className='product-detail-page bg-[#F8FAFC] pb-24 md:pb-6'>
       <SEO
         title={product.name}
@@ -1534,6 +1535,7 @@ const ProductDetails = () => {
       </div>
     </div>
     <SizeGuideModal open={sizeGuideOpen} onClose={() => setSizeGuideOpen(false)} />
+    </>
   );
 };
 
