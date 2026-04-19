@@ -38,7 +38,9 @@
       "Bash(node -e \"require\\('next-pwa'\\); console.log\\('ok'\\)\")",
       "Bash(head -20 tailwind.config.js)",
       "Bash(head -20 tailwind.config.ts)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
