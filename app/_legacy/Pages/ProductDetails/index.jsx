@@ -857,6 +857,10 @@ const ProductDetails = () => {
   const { items: recentlyViewed, track } = useRecentlyViewed();
   const { isLogin, openAlertBox } = useContext(MyContext);
 
+  // Must be called before any conditional returns (Rules of Hooks)
+  const saleCountdown = useCountdown(product?.saleEndsAt ?? null);
+  const peopleViewing = usePeopleViewing(product?.id ?? null);
+
   useEffect(() => {
     setLoading(true);
     setProduct(null);
@@ -951,8 +955,6 @@ const ProductDetails = () => {
   const lowStock = inStock && product.countInStock <= 10;
   const stockPct = Math.min(100, Math.round((product.countInStock / 50) * 100));
   const savings = product.oldprice > product.price ? product.oldprice - product.price : 0;
-  const saleCountdown = useCountdown(product.saleEndsAt);
-  const peopleViewing = usePeopleViewing(product.id);
   const productPath = `/product/${product.slug || product.id}`;
   const productDescription = stripHtml(product.description || '').slice(0, 155);
   const safeDescriptionHtml = sanitizeHtml(product.description || '');
