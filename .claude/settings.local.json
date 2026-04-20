@@ -43,7 +43,10 @@
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
       "Bash(node --input-type=module)",
-      "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)"
+      "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)",
+      "Bash(awk -F: 'NR>30{print}')",
+      "Bash(node -e \"const pkg = require\\('./package.json'\\); console.log\\('@mui/material:', pkg.dependencies['@mui/material'] || 'NOT INSTALLED'\\);\")",
+      "Bash(awk 'NR>=480 && NR<=840' \"app/_legacy/Pages/ProductDetails/index.jsx\")"
     ]
   }
 }

@@ -1,12 +1,10 @@
 "use client";
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import SEO from '../../components/SEO';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
-import Rating from '@mui/material/Rating';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
+import { FaStar as FaStarFilled, FaStarHalfAlt } from 'react-icons/fa';
 import {
   FaHeart, FaRegHeart, FaMinus, FaPlus, FaCheckCircle, FaStar,
   FaMapMarkerAlt, FaChevronDown, FaChevronUp, FaShippingFast,
@@ -28,6 +26,37 @@ import usePeopleViewing from '../../hooks/usePeopleViewing';
 import { MyContext } from '../../LegacyProviders';
 
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN');
+
+const tryParse = (val) => {
+  if (Array.isArray(val)) return val;
+  if (!val) return [];
+  try { return JSON.parse(val); } catch { return []; }
+};
+
+function StarRating({ value = 0, onChange, size = 'small' }) {
+  const stars = [];
+  const filled = Math.floor(value);
+  const half   = value - filled >= 0.4;
+  const sz     = size === 'large' ? 'text-[26px]' : 'text-[14px]';
+  for (let i = 1; i <= 5; i++) {
+    if (onChange) {
+      stars.push(
+        <button key={i} type='button' onClick={() => onChange(null, i)}
+          className={`${sz} transition-colors ${i <= value ? 'text-yellow-400' : 'text-gray-200 hover:text-yellow-300'}`}>
+          <FaStarFilled />
+        </button>
+      );
+    } else {
+      const icon = i <= filled
+        ? <FaStarFilled className={`${sz} text-yellow-400`} />
+        : (i === filled + 1 && half)
+          ? <FaStarHalfAlt className={`${sz} text-yellow-400`} />
+          : <FaStarFilled className={`${sz} text-gray-200`} />;
+      stars.push(<span key={i}>{icon}</span>);
+    }
+  }
+  return <div className='flex items-center gap-0.5'>{stars}</div>;
+}
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 const getDeliveryDate = (plusBusinessDays = 4) => {
@@ -501,25 +530,29 @@ const ReviewsSection = ({ productId }) => {
   const [helpful, setHelpful] = useState({}); // { reviewId: true/false }
 
   const fetchReviews = async (p = 1) => {
-    const res = await getData(`/api/reviews/product/${productId}?page=${p}&perPage=5`);
-    if (res && !res.error) {
-      setReviews(res.data.reviews);
-      setSummary(res.summary);
-      setTotalPages(res.data.totalPages);
-      setPage(p);
-    }
-    setLoading(false);
+    try {
+      const res = await getData(`/api/reviews/product/${productId}?page=${p}&perPage=5`);
+      if (res && !res.error) {
+        setReviews(res.data.reviews);
+        setSummary(res.summary);
+        setTotalPages(res.data.totalPages);
+        setPage(p);
+      }
+    } catch { /* silent — UI stays with previous state */ }
+    finally { setLoading(false); }
   };
 
   const fetchMyReview = async () => {
     if (!isLogin) return;
-    const res = await getData(`/api/reviews/check/${productId}`);
-    if (res && !res.error && res.review) {
-      setMyReview(res.review);
-      setFormRating(res.review.rating);
-      setFormTitle(res.review.title || '');
-      setFormComment(res.review.comment || '');
-    }
+    try {
+      const res = await getData(`/api/reviews/check/${productId}`);
+      if (res && !res.error && res.review) {
+        setMyReview(res.review);
+        setFormRating(res.review.rating);
+        setFormTitle(res.review.title || '');
+        setFormComment(res.review.comment || '');
+      }
+    } catch { /* silent */ }
   };
 
   useEffect(() => {
@@ -551,14 +584,13 @@ const ReviewsSection = ({ productId }) => {
   const total = summary.totalRatings || 0;
   const rMap = summary.ratingMap || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 
-  // Client-side sort + filter
-  const displayReviews = [...reviews]
+  const displayReviews = useMemo(() => [...reviews]
     .filter(r => filterRating === null || r.rating === filterRating)
     .sort((a, b) => {
       if (sortBy === 'highest') return b.rating - a.rating;
       if (sortBy === 'lowest') return a.rating - b.rating;
       return new Date(b.createdAt) - new Date(a.createdAt);
-    });
+    }), [reviews, filterRating, sortBy]);
 
   if (loading) return (
     <div className='space-y-3 py-4'>
@@ -582,7 +614,7 @@ const ReviewsSection = ({ productId }) => {
         {/* Big average */}
         <div className='flex flex-col items-center justify-center min-w-[110px] gap-1'>
           <p className='text-[56px] font-[900] text-[#1565C0] leading-none'>{avg.toFixed(1)}</p>
-          <Rating value={avg} readOnly precision={0.5} size='small' />
+          <StarRating value={avg} size='small' />
           <p className='text-[12px] text-gray-400 mt-1'>{total.toLocaleString()} rating{total !== 1 ? 's' : ''}</p>
           {avg >= 4 && (
             <span className='mt-1 flex items-center gap-1 text-[11px] bg-green-100 text-green-700 font-[600] px-2 py-0.5 rounded-full'>
@@ -649,55 +681,50 @@ const ReviewsSection = ({ productId }) => {
           </div>
           <div className='mb-4'>
             <p className='text-[13px] font-[500] text-gray-600 mb-2'>Your Rating *</p>
-            <Rating
-              value={formRating}
-              onChange={(_, v) => setFormRating(v)}
-              size='large'
-              sx={{ fontSize: '2rem' }}
-            />
+            <StarRating value={formRating} onChange={(_, v) => setFormRating(v)} size='large' />
           </div>
           <div className='mb-3'>
-            <TextField
-              label='Title (optional)'
-              value={formTitle}
+            <label className='block text-[12px] font-[600] text-gray-500 mb-1'>Title (optional)</label>
+            <input
+              type='text' maxLength={120} value={formTitle}
               onChange={e => setFormTitle(e.target.value)}
-              fullWidth size='small'
-              inputProps={{ maxLength: 120 }}
+              placeholder='Summarise your experience'
+              className='w-full px-3.5 py-2.5 text-[13px] border border-gray-200 rounded-xl outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/10 transition-all bg-[#F8FAFF]'
             />
           </div>
           <div className='mb-4'>
-            <TextField
-              label='Your review *'
-              value={formComment}
+            <label className='block text-[12px] font-[600] text-gray-500 mb-1'>Your review *</label>
+            <textarea
+              rows={4} maxLength={1000} value={formComment}
               onChange={e => setFormComment(e.target.value)}
-              fullWidth multiline rows={4} size='small'
-              inputProps={{ maxLength: 1000 }}
-              helperText={`${formComment.length}/1000`}
+              placeholder='Tell others what you think about this product…'
+              className='w-full px-3.5 py-2.5 text-[13px] border border-gray-200 rounded-xl outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/10 transition-all bg-[#F8FAFF] resize-y'
             />
+            <p className='text-[11px] text-gray-400 text-right mt-0.5'>{formComment.length}/1000</p>
           </div>
           <div className='mb-4'>
-            <TextField
-              label='Photo URL (optional)'
-              value={formImageUrl}
+            <label className='block text-[12px] font-[600] text-gray-500 mb-1'>Photo URL (optional)</label>
+            <input
+              type='url' value={formImageUrl}
               onChange={e => setFormImageUrl(e.target.value)}
-              fullWidth size='small'
-              placeholder='https://...'
-              helperText='Paste a direct image URL to attach a photo to your review'
+              placeholder='https://…'
+              className='w-full px-3.5 py-2.5 text-[13px] border border-gray-200 rounded-xl outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/10 transition-all bg-[#F8FAFF]'
             />
+            <p className='text-[11px] text-gray-400 mt-0.5'>Paste a direct image URL to attach a photo</p>
           </div>
           <div className='flex gap-3'>
-            <Button
-              type='submit' disabled={submitting || !formComment.trim()} variant='contained'
-              style={{ background: '#1565C0', borderRadius: '10px', textTransform: 'none', fontWeight: 700, padding: '10px 24px' }}
+            <button
+              type='submit' disabled={submitting || !formComment.trim()}
+              className='px-6 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
             >
               {submitting ? 'Submitting…' : 'Submit Review'}
-            </Button>
-            <Button
-              onClick={() => setShowForm(false)} variant='outlined'
-              style={{ borderColor: '#d1d5db', color: '#6b7280', borderRadius: '10px', textTransform: 'none' }}
+            </button>
+            <button
+              type='button' onClick={() => setShowForm(false)}
+              className='px-5 py-2.5 border border-gray-200 text-[13px] font-[600] text-gray-600 rounded-xl hover:bg-gray-50 transition-colors'
             >
               Cancel
-            </Button>
+            </button>
           </div>
         </form>
       )}
@@ -713,7 +740,7 @@ const ReviewsSection = ({ productId }) => {
               </span>
             )}
           </div>
-          <Rating value={myReview.rating} readOnly size='small' />
+          <StarRating value={myReview.rating} size='small' />
           {myReview.title && <p className='text-[14px] font-[700] text-gray-800 mt-1'>{myReview.title}</p>}
           <p className='text-[13px] text-gray-600 mt-1 leading-relaxed'>{myReview.comment}</p>
           <button
@@ -765,7 +792,7 @@ const ReviewsSection = ({ productId }) => {
                       {new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
                   </div>
-                  <Rating value={r.rating} readOnly size='small' />
+                  <StarRating value={r.rating} size='small' />
                   {r.title && <p className='text-[14px] font-[700] text-gray-800 mt-1.5'>{r.title}</p>}
                   <p className='text-[13px] text-gray-600 mt-1 leading-relaxed'>{r.comment}</p>
                   {r.images && r.images.length > 0 && (
@@ -851,6 +878,7 @@ const ProductDetails = () => {
   const [reviewCount, setReviewCount] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
   const reviewsRef = useRef(null);
+  const justAddedTimer = useRef(null);
 
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
@@ -875,9 +903,9 @@ const ProductDetails = () => {
         if (res && !res.error && res.product) {
           const p = res.product;
           setProduct(p);
-          const colors = Array.isArray(p.productRam) ? p.productRam : (p.productRam ? JSON.parse(p.productRam) : []);
-          const sz  = Array.isArray(p.size) ? p.size : (p.size ? JSON.parse(p.size) : []);
-          const wt  = Array.isArray(p.productWeight) ? p.productWeight : (p.productWeight ? JSON.parse(p.productWeight) : []);
+          const colors = tryParse(p.productRam);
+          const sz     = tryParse(p.size);
+          const wt     = tryParse(p.productWeight);
           if (colors.length) setSelectedColor(colors[0]);
           if (sz.length)  setSelectedSize(sz[0]);
           if (wt.length)  setSelectedWeight(wt[0]);
@@ -893,11 +921,14 @@ const ProductDetails = () => {
       .finally(() => setLoading(false));
   }, [productParam]);
 
+  useEffect(() => () => clearTimeout(justAddedTimer.current), []);
+
   const handleAddToCart = (productId) => {
     addToCart(productId);
     if (productId === product?.id) {
       setJustAdded(true);
-      setTimeout(() => setJustAdded(false), 2000);
+      clearTimeout(justAddedTimer.current);
+      justAddedTimer.current = setTimeout(() => setJustAdded(false), 2000);
     }
   };
 

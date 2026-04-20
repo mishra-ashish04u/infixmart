@@ -1,299 +1,218 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import adminAxios from '../utils/adminAxios';
+import { useEffect, useState } from "react";
+import adminAxios from "../utils/adminAxios";
+import toast, { Toaster } from "react-hot-toast";
+import { MdAdd, MdClose } from "react-icons/md";
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
 const parseJson = (str, fallback) => { try { return JSON.parse(str); } catch { return fallback; } };
 
-// ── Reusable primitives ────────────────────────────────────────────────────────
-const Section = ({ title, note, children, onSave, saving, saveLabel }) => (
-  <div style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: '1.5rem', marginBottom: '1.25rem' }}>
-    <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#1A237E', margin: '0 0 1.25rem' }}>{title}</h2>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>{children}</div>
-    {note && <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.75rem', marginBottom: 0 }}>{note}</p>}
+const inputCls  = "h-9 px-3 text-[13px] text-gray-700 bg-[#F8FAFF] border border-gray-200 rounded-xl outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/10 transition-all";
+const labelCls  = "block text-[11px] font-[700] uppercase tracking-wider text-gray-400 mb-1.5";
+const selectCls = `${inputCls} cursor-pointer bg-white`;
+
+// ── Toggle ────────────────────────────────────────────────────────────────────
+function Toggle({ checked, onChange }) {
+  return (
     <button
-      onClick={onSave}
-      disabled={saving}
-      style={{
-        marginTop: '1.25rem', padding: '0.55rem 1.5rem',
-        background: saving ? '#90CAF9' : '#1565C0', color: '#fff',
-        border: 'none', borderRadius: 6, fontSize: '0.875rem', fontWeight: 600,
-        cursor: saving ? 'not-allowed' : 'pointer', transition: 'background 0.15s',
-      }}
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={`relative w-11 h-6 rounded-full transition-colors ${checked ? "bg-green-500" : "bg-gray-300"}`}
     >
-      {saving ? 'Saving…' : (saveLabel || 'Save')}
+      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${checked ? "left-6" : "left-1"}`} />
     </button>
-  </div>
-);
+  );
+}
 
-const Field = ({ label, children }) => (
-  <div>
-    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#555', marginBottom: 6 }}>{label}</label>
-    {children}
-  </div>
-);
-
-const numInput = (value, onChange, extra = {}) => (
-  <input
-    type="number"
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    style={{ width: 140, height: 36, padding: '0 10px', border: '1px solid #ccc', borderRadius: 6, fontSize: '0.875rem', outline: 'none' }}
-    {...extra}
-  />
-);
-
-const Toggle = ({ checked, onChange }) => (
-  <div
-    onClick={() => onChange(!checked)}
-    style={{
-      position: 'relative', display: 'inline-flex', alignItems: 'center',
-      width: 44, height: 24, borderRadius: 12, cursor: 'pointer',
-      background: checked ? '#00A651' : '#ccc', transition: 'background 0.2s',
-    }}
-  >
-    <span style={{
-      position: 'absolute', top: 3, left: checked ? 23 : 3,
-      width: 18, height: 18, borderRadius: '50%', background: '#fff',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.25)', transition: 'left 0.2s',
-    }} />
-  </div>
-);
-
-const inputStyle = { height: 34, padding: '0 8px', border: '1px solid #ddd', borderRadius: 5, fontSize: '0.8rem', outline: 'none' };
-const selectStyle = { ...inputStyle, background: '#fff', cursor: 'pointer' };
+// ── Section card ──────────────────────────────────────────────────────────────
+function Section({ title, note, children, onSave, saving, saveLabel, icon }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+      <div className="flex items-center gap-2.5 mb-1">
+        {icon && <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0D47A1] to-[#1565C0] flex items-center justify-center text-base">{icon}</div>}
+        <h2 className="text-[15px] font-[800] text-[#1A237E]">{title}</h2>
+      </div>
+      {children}
+      {note && <p className="text-[11px] text-gray-400">{note}</p>}
+      <button onClick={onSave} disabled={saving} className="px-5 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-60">
+        {saving ? "Saving…" : saveLabel || "Save"}
+      </button>
+    </div>
+  );
+}
 
 // ── Milestone live preview ────────────────────────────────────────────────────
-const MilestonePreview = ({ minOrder, timelineMax, milestones }) => {
+function MilestonePreview({ minOrder, timelineMax, milestones }) {
   const max = Number(timelineMax) || 1999;
   const allDots = [
-    { amount: Number(minOrder) || 999, label: 'Min order', type: 'min_order' },
-    ...milestones
-      .filter((m) => Number(m.amount) > 0)
-      .map((m) => ({ ...m, amount: Number(m.amount) })),
+    { amount: Number(minOrder) || 999, label: "Min order", type: "min_order" },
+    ...milestones.filter((m) => Number(m.amount) > 0).map((m) => ({ ...m, amount: Number(m.amount) })),
   ].sort((a, b) => a.amount - b.amount).filter((m) => m.amount <= max * 1.05);
 
   return (
-    <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: '#F5F7FF', borderRadius: 8, border: '1px solid #e0e7ff' }}>
-      <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#888', marginBottom: 12, letterSpacing: '0.05em' }}>LIVE PREVIEW</p>
-      <div style={{ position: 'relative', height: 8, background: '#E3F2FD', borderRadius: 8, margin: '24px 8px 32px' }}>
+    <div className="mt-2 p-4 bg-[#F5F7FF] rounded-xl border border-[#E0E7FF]">
+      <p className="text-[10px] font-[700] text-gray-400 uppercase tracking-wider mb-4">Live Preview</p>
+      <div className="relative h-2 bg-blue-100 rounded-full mx-2 mt-6 mb-8">
         {allDots.map((dot, i) => {
           const pct = Math.min((dot.amount / max) * 100, 100);
           return (
-            <div key={i} style={{ position: 'absolute', left: `${pct}%`, top: -3, transform: 'translateX(-50%)' }}>
-              <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#1565C0', border: '2px solid #1565C0' }} />
-              <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 4, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: '#1565C0' }}>₹{dot.amount.toLocaleString('en-IN')}</div>
-                <div style={{ fontSize: 8, color: '#555' }}>{dot.label}</div>
+            <div key={i} className="absolute top-[-3px]" style={{ left: `${pct}%`, transform: "translateX(-50%)" }}>
+              <div className="w-3.5 h-3.5 rounded-full bg-[#1565C0] border-2 border-[#1565C0]" />
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 text-center whitespace-nowrap">
+                <div className="text-[9px] font-[700] text-[#1565C0]">₹{dot.amount.toLocaleString("en-IN")}</div>
+                <div className="text-[8px] text-gray-500">{dot.label}</div>
               </div>
             </div>
           );
         })}
       </div>
-      <p style={{ fontSize: '0.7rem', color: '#aaa', textAlign: 'right' }}>Max: ₹{Number(timelineMax).toLocaleString('en-IN')}</p>
+      <p className="text-[10px] text-gray-400 text-right">Max: ₹{Number(timelineMax).toLocaleString("en-IN")}</p>
     </div>
   );
-};
+}
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-const StoreSettings = () => {
-  const [loaded, setLoaded] = useState(false);
-  const [toast, setToast]   = useState('');
+const ICON_MAP = { cart: "🛒", truck: "🚚", zap: "⚡", headset: "🎧", star: "⭐", gift: "🎁", shield: "🛡" };
 
-  // Section 1 — Order Rules
-  const [minOrder, setMinOrder]       = useState('999');
-  const [codOn, setCodOn]             = useState(true);
+export default function StoreSettings() {
+  const [loaded, setLoaded] = useState(false);
+
+  const [minOrder,    setMinOrder]    = useState("999");
+  const [codOn,       setCodOn]       = useState(true);
   const [savingOrder, setSavingOrder] = useState(false);
 
-  // Section 2 — GST
-  const [gst, setGst]             = useState('18');
-  const [savingGst, setSavingGst] = useState(false);
+  const [gst,        setGst]        = useState("18");
+  const [savingGst,  setSavingGst]  = useState(false);
 
-  // Section 3 — InfixPass Membership
-  const [memEnabled, setMemEnabled]   = useState(true);
-  const [memPrice, setMemPrice]       = useState('49');
-  const [memBenefits, setMemBenefits] = useState([
-    { icon: 'cart',    title: 'Shop from just ₹499',          subtitle: 'Half the usual ₹999 minimum — always'  },
-    { icon: 'truck',   title: 'Free Delivery on Every Order',  subtitle: 'Zero shipping charges, forever'         },
-    { icon: 'zap',     title: 'Priority Fast Delivery',        subtitle: 'Your orders are dispatched first'       },
-    { icon: 'headset', title: 'Dedicated Customer Support',    subtitle: 'Skip the queue — member-only care'      },
+  const [memEnabled,   setMemEnabled]   = useState(true);
+  const [memPrice,     setMemPrice]     = useState("49");
+  const [memBenefits,  setMemBenefits]  = useState([
+    { icon: "cart",    title: "Shop from just ₹499",         subtitle: "Half the usual ₹999 minimum — always" },
+    { icon: "truck",   title: "Free Delivery on Every Order", subtitle: "Zero shipping charges, forever"        },
+    { icon: "zap",     title: "Priority Fast Delivery",       subtitle: "Your orders are dispatched first"      },
+    { icon: "headset", title: "Dedicated Customer Support",   subtitle: "Skip the queue — member-only care"     },
   ]);
   const [savingMem, setSavingMem] = useState(false);
 
-  // Section 4 — Cart Timeline
-  const [timelineEnabled, setTimelineEnabled]   = useState(true);
-  const [timelineMax, setTimelineMax]           = useState('1999');
-  const [milestones, setMilestones]             = useState([]); // reward milestones only (no min_order)
-  const [savingTimeline, setSavingTimeline]     = useState(false);
+  const [timelineEnabled, setTimelineEnabled] = useState(true);
+  const [timelineMax,     setTimelineMax]     = useState("1999");
+  const [milestones,      setMilestones]      = useState([]);
+  const [savingTimeline,  setSavingTimeline]  = useState(false);
 
   useEffect(() => {
-    adminAxios.get('/api/admin/settings').then((res) => {
+    adminAxios.get("/api/admin/settings").then((res) => {
       const s = res.data?.settings || {};
-      if (s.min_order_value)          setMinOrder(s.min_order_value);
-      if (s.cod_enabled !== undefined) setCodOn(s.cod_enabled !== 'false');
-      if (s.gst_percent)              setGst(s.gst_percent);
-      if (s.membership_price)    setMemPrice(s.membership_price);
-      if (s.membership_enabled !== undefined) setMemEnabled(s.membership_enabled !== 'false');
+      if (s.min_order_value)              setMinOrder(s.min_order_value);
+      if (s.cod_enabled !== undefined)    setCodOn(s.cod_enabled !== "false");
+      if (s.gst_percent)                  setGst(s.gst_percent);
+      if (s.membership_price)             setMemPrice(s.membership_price);
+      if (s.membership_enabled !== undefined) setMemEnabled(s.membership_enabled !== "false");
       if (s.membership_benefits) {
-        const parsed = parseJson(s.membership_benefits, null);
-        if (Array.isArray(parsed) && parsed.length) setMemBenefits(parsed);
+        const p = parseJson(s.membership_benefits, null);
+        if (Array.isArray(p) && p.length) setMemBenefits(p);
       }
-      if (s.cart_timeline_enabled !== undefined) setTimelineEnabled(s.cart_timeline_enabled !== 'false');
-      if (s.cart_timeline_max)        setTimelineMax(s.cart_timeline_max);
+      if (s.cart_timeline_enabled !== undefined) setTimelineEnabled(s.cart_timeline_enabled !== "false");
+      if (s.cart_timeline_max)            setTimelineMax(s.cart_timeline_max);
       if (s.cart_milestones) {
-        const parsed = parseJson(s.cart_milestones, []);
-        setMilestones(parsed.filter((m) => m.type !== 'min_order'));
+        const p = parseJson(s.cart_milestones, []);
+        setMilestones(p.filter((m) => m.type !== "min_order"));
       }
       setLoaded(true);
     }).catch(() => setLoaded(true));
   }, []);
 
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3000);
-  };
-
   const save = async (pairs, setFlag) => {
     setFlag(true);
     try {
-      for (const [key, value] of pairs) {
-        await adminAxios.put('/api/admin/settings', { key, value: String(value) });
-      }
-      showToast('Settings saved!');
-    } catch {
-      showToast('Failed to save settings.');
-    }
+      for (const [key, value] of pairs) await adminAxios.put("/api/admin/settings", { key, value: String(value) });
+      toast.success("Settings saved!");
+    } catch { toast.error("Failed to save settings."); }
     setFlag(false);
   };
 
-  // Milestone CRUD
-  const addMilestone = () =>
-    setMilestones((prev) => [...prev, { amount: '', label: '', type: 'free_shipping', enabled: true }]);
-  const removeMilestone = (i) =>
-    setMilestones((prev) => prev.filter((_, idx) => idx !== i));
-  const updateMilestone = (i, key, value) =>
-    setMilestones((prev) => prev.map((m, idx) => idx === i ? { ...m, [key]: value } : m));
+  const addMilestone    = () => setMilestones((p) => [...p, { amount: "", label: "", type: "free_shipping", enabled: true }]);
+  const removeMilestone = (i) => setMilestones((p) => p.filter((_, idx) => idx !== i));
+  const updateMilestone = (i, k, v) => setMilestones((p) => p.map((m, idx) => idx === i ? { ...m, [k]: v } : m));
 
   const saveTimeline = async () => {
     setSavingTimeline(true);
     try {
-      const milestoneData = milestones
-        .filter((m) => Number(m.amount) > 0 && m.label.trim())
+      const data = milestones.filter((m) => Number(m.amount) > 0 && m.label.trim())
         .map((m) => ({ amount: Number(m.amount), label: m.label.trim(), type: m.type, enabled: Boolean(m.enabled) }));
-
       await Promise.all([
-        adminAxios.put('/api/admin/settings', { key: 'cart_timeline_enabled', value: String(timelineEnabled) }),
-        adminAxios.put('/api/admin/settings', { key: 'cart_timeline_max',     value: String(timelineMax)     }),
-        adminAxios.put('/api/admin/settings', { key: 'cart_milestones',       value: JSON.stringify(milestoneData) }),
+        adminAxios.put("/api/admin/settings", { key: "cart_timeline_enabled", value: String(timelineEnabled) }),
+        adminAxios.put("/api/admin/settings", { key: "cart_timeline_max",     value: String(timelineMax)     }),
+        adminAxios.put("/api/admin/settings", { key: "cart_milestones",       value: JSON.stringify(data)    }),
       ]);
-      showToast('Settings saved!');
-    } catch {
-      showToast('Failed to save settings.');
-    }
+      toast.success("Settings saved!");
+    } catch { toast.error("Failed to save settings."); }
     setSavingTimeline(false);
   };
 
-  if (!loaded) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 60 }}>
-        <div style={{ width: 28, height: 28, border: '3px solid #1565C0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
+  if (!loaded) return (
+    <div className="flex justify-center pt-16">
+      <div className="w-7 h-7 border-[3px] border-[#1565C0] border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   return (
-    <div style={{ maxWidth: 680 }}>
-      {/* Toast */}
-      {toast && (
-        <div style={{
-          position: 'fixed', top: 20, right: 20, zIndex: 9999,
-          background: toast.startsWith('Failed') ? '#E53935' : '#00A651',
-          color: '#fff', padding: '10px 20px', borderRadius: 8,
-          fontSize: '0.875rem', fontWeight: 600, boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-        }}>
-          {toast}
-        </div>
-      )}
+    <div className="space-y-4 max-w-2xl">
+      <Toaster position="top-right" />
 
       {/* Section 1 — Order Rules */}
-      <Section
-        title="Order Rules"
-        onSave={() => save([['min_order_value', minOrder], ['cod_enabled', String(codOn)]], setSavingOrder)}
-        saving={savingOrder}
-        saveLabel="Save Order Rules"
-      >
-        <Field label="Min Order Value (₹)">
-          {numInput(minOrder, setMinOrder)}
-        </Field>
-        <Field label="COD Enabled">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <Section title="Order Rules" onSave={() => save([["min_order_value", minOrder], ["cod_enabled", String(codOn)]], setSavingOrder)} saving={savingOrder} saveLabel="Save Order Rules">
+        <div>
+          <label className={labelCls}>Min Order Value (₹)</label>
+          <input type="number" value={minOrder} onChange={(e) => setMinOrder(e.target.value)} className={`${inputCls} w-36`} />
+        </div>
+        <div>
+          <label className={labelCls}>COD Enabled</label>
+          <div className="flex items-center gap-2.5">
             <Toggle checked={codOn} onChange={setCodOn} />
-            <span style={{ fontSize: '0.8rem', color: codOn ? '#00A651' : '#888', fontWeight: 600 }}>
-              {codOn ? 'On' : 'Off'}
-            </span>
+            <span className={`text-[13px] font-[600] ${codOn ? "text-green-600" : "text-gray-400"}`}>{codOn ? "On" : "Off"}</span>
           </div>
-        </Field>
+        </div>
       </Section>
 
       {/* Section 2 — GST */}
-      <Section
-        title="GST"
-        note="GST is added on top of product price at checkout"
-        onSave={() => save([['gst_percent', gst]], setSavingGst)}
-        saving={savingGst}
-        saveLabel="Save GST"
-      >
-        <Field label="GST Percentage (%)">
-          <input
-            type="number" min={0} max={100}
-            value={gst} onChange={(e) => setGst(e.target.value)}
-            style={{ width: 140, height: 36, padding: '0 10px', border: '1px solid #ccc', borderRadius: 6, fontSize: '0.875rem', outline: 'none' }}
-          />
-        </Field>
+      <Section title="GST" note="GST is added on top of product price at checkout" onSave={() => save([["gst_percent", gst]], setSavingGst)} saving={savingGst} saveLabel="Save GST">
+        <div>
+          <label className={labelCls}>GST Percentage (%)</label>
+          <input type="number" min={0} max={100} value={gst} onChange={(e) => setGst(e.target.value)} className={`${inputCls} w-36`} />
+        </div>
       </Section>
 
       {/* Section 3 — InfixPass Membership */}
-      <div style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: '1.5rem', marginBottom: '1.25rem' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg,#0D47A1,#1565C0)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>⭐</div>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#1A237E', margin: 0 }}>InfixPass Membership</h2>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0D47A1] to-[#1565C0] flex items-center justify-center text-base">⭐</div>
+            <h2 className="text-[15px] font-[800] text-[#1A237E]">InfixPass Membership</h2>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '0.78rem', color: memEnabled ? '#00A651' : '#888', fontWeight: 600 }}>{memEnabled ? 'Active' : 'Disabled'}</span>
+          <div className="flex items-center gap-2">
+            <span className={`text-[12px] font-[600] ${memEnabled ? "text-green-600" : "text-gray-400"}`}>{memEnabled ? "Active" : "Disabled"}</span>
             <Toggle checked={memEnabled} onChange={setMemEnabled} />
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        {/* Price */}
+        <div>
+          <label className={labelCls}>Membership Price (₹) — Lifetime one-time payment</label>
+          <div className="flex items-center gap-3">
+            <input type="number" min={1} value={memPrice} onChange={(e) => setMemPrice(e.target.value)} className={`${inputCls} w-28`} />
+            <span className="text-[12px] text-gray-400">charged once, lifetime access</span>
+          </div>
+        </div>
 
-          {/* Price */}
-          <Field label="Membership Price (₹) — Lifetime, one-time payment">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {numInput(memPrice, setMemPrice, { min: 1, style: { width: 120, height: 36, padding: '0 10px', border: '1px solid #ccc', borderRadius: 6, fontSize: '0.875rem', outline: 'none' } })}
-              <span style={{ fontSize: '0.78rem', color: '#888' }}>charged once, lifetime access</span>
-            </div>
-          </Field>
-
-          {/* Benefits editor */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#555', marginBottom: 8 }}>
-              Membership Benefits &nbsp;<span style={{ fontWeight: 400, color: '#aaa' }}>(shown in the popup card)</span>
-            </label>
-
+        {/* Benefits editor */}
+        <div>
+          <label className={labelCls}>Membership Benefits <span className="normal-case font-[400] text-gray-300">(shown in the popup card)</span></label>
+          <div className="space-y-2.5 mb-3">
             {memBenefits.map((b, i) => (
-              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 10, padding: '10px 12px', background: '#F8F9FF', borderRadius: 8, border: '1px solid #E8ECFF' }}>
-                {/* Icon picker */}
-                <div>
-                  <div style={{ fontSize: '0.68rem', color: '#aaa', marginBottom: 3, fontWeight: 600 }}>ICON</div>
-                  <select
-                    value={b.icon}
-                    onChange={(e) => setMemBenefits((prev) => prev.map((x, idx) => idx === i ? { ...x, icon: e.target.value } : x))}
-                    style={{ ...selectStyle, width: 90, height: 34 }}
-                  >
+              <div key={i} className="flex gap-2 items-start p-3 bg-[#F8F9FF] rounded-xl border border-[#E8ECFF]">
+                <div className="flex-shrink-0">
+                  <div className="text-[9px] text-gray-400 font-[700] uppercase mb-1">Icon</div>
+                  <select value={b.icon} onChange={(e) => setMemBenefits((p) => p.map((x, idx) => idx === i ? { ...x, icon: e.target.value } : x))} className={`${selectCls} w-24 text-[12px]`}>
                     <option value="cart">🛒 Cart</option>
                     <option value="truck">🚚 Truck</option>
                     <option value="zap">⚡ Zap</option>
@@ -303,236 +222,139 @@ const StoreSettings = () => {
                     <option value="shield">🛡 Shield</option>
                   </select>
                 </div>
-
-                {/* Title */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.68rem', color: '#aaa', marginBottom: 3, fontWeight: 600 }}>TITLE</div>
-                  <input
-                    type="text"
-                    value={b.title}
-                    onChange={(e) => setMemBenefits((prev) => prev.map((x, idx) => idx === i ? { ...x, title: e.target.value } : x))}
-                    placeholder="e.g. Free Delivery"
-                    style={{ ...inputStyle, width: '100%' }}
-                  />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[9px] text-gray-400 font-[700] uppercase mb-1">Title</div>
+                  <input type="text" value={b.title} onChange={(e) => setMemBenefits((p) => p.map((x, idx) => idx === i ? { ...x, title: e.target.value } : x))} placeholder="e.g. Free Delivery" className={`${inputCls} w-full text-[12px]`} />
                 </div>
-
-                {/* Subtitle */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.68rem', color: '#aaa', marginBottom: 3, fontWeight: 600 }}>SUBTITLE</div>
-                  <input
-                    type="text"
-                    value={b.subtitle}
-                    onChange={(e) => setMemBenefits((prev) => prev.map((x, idx) => idx === i ? { ...x, subtitle: e.target.value } : x))}
-                    placeholder="Short description"
-                    style={{ ...inputStyle, width: '100%' }}
-                  />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[9px] text-gray-400 font-[700] uppercase mb-1">Subtitle</div>
+                  <input type="text" value={b.subtitle} onChange={(e) => setMemBenefits((p) => p.map((x, idx) => idx === i ? { ...x, subtitle: e.target.value } : x))} placeholder="Short description" className={`${inputCls} w-full text-[12px]`} />
                 </div>
-
-                {/* Remove */}
-                <div>
-                  <div style={{ fontSize: '0.68rem', color: 'transparent', marginBottom: 3 }}>DEL</div>
-                  <button
-                    onClick={() => setMemBenefits((prev) => prev.filter((_, idx) => idx !== i))}
-                    title="Remove benefit"
-                    style={{ width: 30, height: 34, border: '1px solid #fcc', borderRadius: 6, background: '#fff5f5', cursor: 'pointer', color: '#E53935', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    ✕
+                <div className="flex-shrink-0 pt-5">
+                  <button onClick={() => setMemBenefits((p) => p.filter((_, idx) => idx !== i))} className="w-8 h-8 flex items-center justify-center bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors">
+                    <MdClose className="text-[14px]" />
                   </button>
                 </div>
               </div>
             ))}
-
-            {memBenefits.length < 6 && (
-              <button
-                onClick={() => setMemBenefits((prev) => [...prev, { icon: 'star', title: '', subtitle: '' }])}
-                style={{ padding: '6px 14px', background: '#fff', border: '1.5px solid #1565C0', color: '#1565C0', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-              >
-                + Add Benefit
-              </button>
-            )}
           </div>
+          {memBenefits.length < 6 && (
+            <button onClick={() => setMemBenefits((p) => [...p, { icon: "star", title: "", subtitle: "" }])} className="flex items-center gap-1.5 px-3 py-2 border border-[#1565C0] text-[#1565C0] text-[12px] font-[600] rounded-xl hover:bg-[#F0F5FF] transition-colors">
+              <MdAdd className="text-[14px]" /> Add Benefit
+            </button>
+          )}
+        </div>
 
-          {/* Live card preview */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#555', marginBottom: 10 }}>
-              Live Card Preview &nbsp;<span style={{ fontWeight: 400, color: '#aaa' }}>(how the popup looks to customers)</span>
-            </label>
-            <div style={{ maxWidth: 320, border: '1px solid #e0e7ff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 24px rgba(13,71,161,0.10)' }}>
-              {/* Modal header preview */}
-              <div style={{ background: 'linear-gradient(135deg, #06266F 0%, #0D47A1 50%, #1565C0 100%)', padding: '24px 20px 20px', textAlign: 'center', position: 'relative' }}>
-                <div style={{ width: 48, height: 48, background: '#FBBF24', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', fontSize: 22, transform: 'rotate(6deg)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>⭐</div>
-                <div style={{ color: '#fff', fontSize: 20, fontWeight: 900, letterSpacing: '-0.5px' }}>InfixPass</div>
-                <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 2 }}>Lifetime Membership</div>
-                <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 3, background: '#FBBF24', color: '#fff', padding: '6px 16px', borderRadius: 20, marginTop: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>₹</span>
-                  <span style={{ fontSize: 28, fontWeight: 900, lineHeight: 1 }}>{memPrice || 49}</span>
-                  <span style={{ fontSize: 11, opacity: 0.85, marginLeft: 2 }}>one-time</span>
-                </div>
+        {/* Live card preview */}
+        <div>
+          <label className={labelCls}>Live Card Preview <span className="normal-case font-[400] text-gray-300">(how the popup looks to customers)</span></label>
+          <div className="max-w-xs border border-[#E0E7FF] rounded-2xl overflow-hidden shadow-md">
+            <div className="bg-gradient-to-br from-[#06266F] via-[#0D47A1] to-[#1565C0] p-6 text-center">
+              <div className="w-12 h-12 bg-amber-400 rounded-xl flex items-center justify-center text-[22px] rotate-6 shadow-lg mx-auto mb-2.5">⭐</div>
+              <div className="text-white text-[20px] font-[900] tracking-tight">InfixPass</div>
+              <div className="text-white/55 text-[11px] mt-0.5">Lifetime Membership</div>
+              <div className="inline-flex items-baseline gap-1 bg-amber-400 text-white px-4 py-1.5 rounded-full mt-3 shadow">
+                <span className="text-[13px] font-[600]">₹</span>
+                <span className="text-[28px] font-[900] leading-none">{memPrice || 49}</span>
+                <span className="text-[11px] opacity-85 ml-0.5">one-time</span>
               </div>
-              {/* Benefits preview */}
-              <div style={{ padding: '14px 14px 18px', background: '#fff' }}>
-                <div style={{ fontSize: 10, color: '#aaa', fontWeight: 700, letterSpacing: '0.08em', textAlign: 'center', marginBottom: 10, textTransform: 'uppercase' }}>What you unlock</div>
+            </div>
+            <div className="p-4 bg-white">
+              <div className="text-[10px] text-gray-400 font-[700] uppercase tracking-wider text-center mb-2.5">What you unlock</div>
+              <div className="space-y-1.5">
                 {memBenefits.map((b, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, background: '#F8F9FF', border: '1px solid #E8ECFF', marginBottom: 6 }}>
-                    <div style={{ width: 30, height: 30, borderRadius: 8, background: '#1565C0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
-                      {{ cart: '🛒', truck: '🚚', zap: '⚡', headset: '🎧', star: '⭐', gift: '🎁', shield: '🛡' }[b.icon] || '✦'}
+                  <div key={i} className="flex items-center gap-2 p-2 bg-[#F8F9FF] rounded-xl border border-[#E8ECFF]">
+                    <div className="w-7 h-7 rounded-lg bg-[#1565C0] flex items-center justify-center text-[12px] flex-shrink-0">{ICON_MAP[b.icon] || "✦"}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-[700] text-gray-800 leading-tight">{b.title || "—"}</div>
+                      <div className="text-[10px] text-gray-400 leading-tight">{b.subtitle || "—"}</div>
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3 }}>{b.title || '—'}</div>
-                      <div style={{ fontSize: 10, color: '#888', lineHeight: 1.3 }}>{b.subtitle || '—'}</div>
-                    </div>
-                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#00A651', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', flexShrink: 0 }}>✓</div>
+                    <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-[9px] text-white flex-shrink-0">✓</div>
                   </div>
                 ))}
-                <div style={{ marginTop: 10, background: '#1565C0', borderRadius: 10, padding: '10px', textAlign: 'center', color: '#fff', fontSize: 12, fontWeight: 700 }}>
-                  Unlock InfixPass — ₹{memPrice || 49} →
-                </div>
+              </div>
+              <div className="mt-2.5 bg-[#1565C0] rounded-xl p-2.5 text-center text-white text-[12px] font-[700]">
+                Unlock InfixPass — ₹{memPrice || 49} →
               </div>
             </div>
           </div>
         </div>
 
-        {/* Save */}
         <button
           onClick={() => {
             const validBenefits = memBenefits.filter((b) => b.title.trim());
-            save([
-              ['membership_enabled', String(memEnabled)],
-              ['membership_price',   String(memPrice)],
-              ['membership_benefits', JSON.stringify(validBenefits)],
-            ], setSavingMem);
+            save([["membership_enabled", String(memEnabled)], ["membership_price", String(memPrice)], ["membership_benefits", JSON.stringify(validBenefits)]], setSavingMem);
           }}
           disabled={savingMem}
-          style={{
-            marginTop: '1.25rem', padding: '0.55rem 1.5rem',
-            background: savingMem ? '#90CAF9' : '#1565C0', color: '#fff',
-            border: 'none', borderRadius: 6, fontSize: '0.875rem', fontWeight: 600,
-            cursor: savingMem ? 'not-allowed' : 'pointer', transition: 'background 0.15s',
-          }}
+          className="px-5 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-60"
         >
-          {savingMem ? 'Saving…' : 'Save InfixPass Settings'}
+          {savingMem ? "Saving…" : "Save InfixPass Settings"}
         </button>
       </div>
 
       {/* Section 4 — Cart Progress Timeline */}
-      <div style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: '1.5rem', marginBottom: '1.25rem' }}>
-        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#1A237E', margin: '0 0 1.25rem' }}>
-          Cart Progress Timeline
-        </h2>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+        <h2 className="text-[15px] font-[800] text-[#1A237E]">Cart Progress Timeline</h2>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Timeline toggle */}
-          <Field label="Timeline Enabled">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Toggle checked={timelineEnabled} onChange={setTimelineEnabled} />
-              <span style={{ fontSize: '0.8rem', color: timelineEnabled ? '#00A651' : '#888', fontWeight: 600 }}>
-                {timelineEnabled ? 'On' : 'Off'}
-              </span>
-            </div>
-          </Field>
+        <div>
+          <label className={labelCls}>Timeline Enabled</label>
+          <div className="flex items-center gap-2.5">
+            <Toggle checked={timelineEnabled} onChange={setTimelineEnabled} />
+            <span className={`text-[13px] font-[600] ${timelineEnabled ? "text-green-600" : "text-gray-400"}`}>{timelineEnabled ? "On" : "Off"}</span>
+          </div>
+        </div>
 
-          {/* Timeline max */}
-          <Field label="Timeline Max Value (₹)">
-            {numInput(timelineMax, setTimelineMax)}
-            <p style={{ fontSize: '0.7rem', color: '#aaa', marginTop: 4 }}>
-              The ₹ value at which the progress bar reaches 100%
-            </p>
-          </Field>
+        <div>
+          <label className={labelCls}>Timeline Max Value (₹)</label>
+          <input type="number" value={timelineMax} onChange={(e) => setTimelineMax(e.target.value)} className={`${inputCls} w-36`} />
+          <p className="text-[11px] text-gray-400 mt-1">The ₹ value at which the progress bar reaches 100%</p>
+        </div>
 
-          {/* Reward milestones */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#555', marginBottom: 8 }}>
-              Reward Milestones
-            </label>
+        <div>
+          <label className={labelCls}>Reward Milestones</label>
+          <p className="text-[11px] text-gray-400 mb-3">The minimum order milestone is added automatically from your Min Order Value setting.</p>
 
-            <p style={{ fontSize: '0.72rem', color: '#aaa', marginBottom: 10 }}>
-              The minimum order milestone is added automatically from your Min Order Value setting.
-            </p>
+          {/* Read-only min_order row */}
+          <div className="flex gap-2 items-center px-3 py-2 bg-gray-50 rounded-xl border border-gray-100 mb-2.5 opacity-70">
+            <span className="text-[13px] text-gray-500">₹</span>
+            <span className="w-20 text-[13px] font-[700] text-gray-700">{minOrder || 999}</span>
+            <span className="flex-1 text-[13px] text-gray-500">Order unlocked</span>
+            <span className="text-[11px] text-gray-400 bg-gray-200 px-2 py-0.5 rounded-lg">min_order · always on</span>
+          </div>
 
-            {/* Read-only min_order row */}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '6px 10px', background: '#F5F5F5', borderRadius: 6, marginBottom: 8, opacity: 0.8 }}>
-              <span style={{ fontSize: '0.8rem', color: '#555' }}>₹</span>
-              <span style={{ width: 90, fontSize: '0.8rem', fontWeight: 700, color: '#333' }}>{minOrder || 999}</span>
-              <span style={{ flex: 1, fontSize: '0.8rem', color: '#555' }}>Order unlocked</span>
-              <span style={{ fontSize: '0.75rem', color: '#888', background: '#e0e0e0', padding: '2px 8px', borderRadius: 4 }}>min_order · always on</span>
-            </div>
-
-            {/* Editable reward milestone rows */}
+          <div className="space-y-2 mb-3">
             {milestones.map((m, i) => (
-              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.8rem', color: '#555' }}>₹</span>
-                <input
-                  type="number"
-                  value={m.amount}
-                  onChange={(e) => updateMilestone(i, 'amount', e.target.value)}
-                  placeholder="Amount"
-                  style={{ ...inputStyle, width: 90 }}
-                />
-                <input
-                  type="text"
-                  value={m.label}
-                  onChange={(e) => updateMilestone(i, 'label', e.target.value)}
-                  placeholder="Label e.g. Free Shipping"
-                  style={{ ...inputStyle, width: 170 }}
-                />
-                <select
-                  value={m.type}
-                  onChange={(e) => updateMilestone(i, 'type', e.target.value)}
-                  style={{ ...selectStyle, width: 130 }}
-                >
+              <div key={i} className="flex gap-2 items-center flex-wrap">
+                <span className="text-[13px] text-gray-500">₹</span>
+                <input type="number" value={m.amount} onChange={(e) => updateMilestone(i, "amount", e.target.value)} placeholder="Amount" className={`${inputCls} w-24`} />
+                <input type="text"   value={m.label}  onChange={(e) => updateMilestone(i, "label",  e.target.value)} placeholder="Label e.g. Free Shipping" className={`${inputCls} flex-1 min-w-[140px]`} />
+                <select value={m.type} onChange={(e) => updateMilestone(i, "type", e.target.value)} className={`${selectCls} w-36`}>
                   <option value="free_shipping">Free Shipping</option>
                   <option value="free_gift">Free Gift</option>
                   <option value="discount">Discount</option>
                 </select>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Toggle checked={!!m.enabled} onChange={(v) => updateMilestone(i, 'enabled', v)} />
-                  <span style={{ fontSize: '0.72rem', color: m.enabled ? '#00A651' : '#aaa' }}>
-                    {m.enabled ? 'On' : 'Off'}
-                  </span>
+                <div className="flex items-center gap-1.5">
+                  <Toggle checked={!!m.enabled} onChange={(v) => updateMilestone(i, "enabled", v)} />
+                  <span className={`text-[11px] font-[600] ${m.enabled ? "text-green-600" : "text-gray-400"}`}>{m.enabled ? "On" : "Off"}</span>
                 </div>
-                <button
-                  onClick={() => removeMilestone(i)}
-                  title="Remove milestone"
-                  style={{ width: 28, height: 28, border: '1px solid #eee', borderRadius: 6, background: '#fff', cursor: 'pointer', color: '#E53935', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  ✕
+                <button onClick={() => removeMilestone(i)} className="w-8 h-8 flex items-center justify-center bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors">
+                  <MdClose className="text-[14px]" />
                 </button>
               </div>
             ))}
-
-            <button
-              onClick={addMilestone}
-              style={{
-                marginTop: 4, padding: '6px 14px',
-                background: '#fff', border: '1.5px solid #1565C0',
-                color: '#1565C0', borderRadius: 6,
-                fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 6,
-              }}
-            >
-              + Add Milestone
-            </button>
           </div>
 
-          {/* Live preview */}
-          <MilestonePreview minOrder={minOrder} timelineMax={timelineMax} milestones={milestones} />
+          <button onClick={addMilestone} className="flex items-center gap-1.5 px-3 py-2 border border-[#1565C0] text-[#1565C0] text-[12px] font-[600] rounded-xl hover:bg-[#F0F5FF] transition-colors">
+            <MdAdd className="text-[14px]" /> Add Milestone
+          </button>
         </div>
 
-        <button
-          onClick={saveTimeline}
-          disabled={savingTimeline}
-          style={{
-            marginTop: '1.25rem', padding: '0.55rem 1.5rem',
-            background: savingTimeline ? '#90CAF9' : '#1565C0', color: '#fff',
-            border: 'none', borderRadius: 6, fontSize: '0.875rem', fontWeight: 600,
-            cursor: savingTimeline ? 'not-allowed' : 'pointer', transition: 'background 0.15s',
-          }}
-        >
-          {savingTimeline ? 'Saving…' : 'Save Timeline Settings'}
+        <MilestonePreview minOrder={minOrder} timelineMax={timelineMax} milestones={milestones} />
+
+        <button onClick={saveTimeline} disabled={savingTimeline} className="px-5 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-60">
+          {savingTimeline ? "Saving…" : "Save Timeline Settings"}
         </button>
       </div>
     </div>
   );
-};
-
-export default StoreSettings;
+}

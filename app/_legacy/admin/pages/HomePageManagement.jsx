@@ -1,21 +1,8 @@
 "use client";
 
-/**
- * Admin — Home Page Management
- *
- * Tabs:
- *  1. Sections      — toggle visibility and drag-reorder all home sections
- *  2. Collections   — CRUD for "Shop by Collection" cards
- *  3. Price Tiers   — CRUD for "Shop by Price" cards
- *  4. Why Choose Us — CRUD for benefit icons
- *  5. Stats Bar     — CRUD for stats numbers
- *  6. Flash Deals   — config title / subtitle / max-price
- *  7. Newsletter    — config title / subtitle / footer text
- */
-
 import { useEffect, useRef, useState } from "react";
 import {
-  MdAdd, MdClose, MdDelete, MdEdit, MdCheck,
+  MdAdd, MdClose, MdDelete, MdEdit,
   MdVisibility, MdVisibilityOff,
   MdKeyboardArrowUp, MdKeyboardArrowDown,
   MdSave,
@@ -23,69 +10,47 @@ import {
 import adminAxios from "../utils/adminAxios";
 import toast, { Toaster } from "react-hot-toast";
 
+const inputCls = "w-full px-3.5 py-2.5 text-[13px] text-gray-700 bg-[#F8FAFF] border border-gray-200 rounded-xl outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/10 transition-all";
+const labelCls = "block text-[11px] font-[700] uppercase tracking-wider text-gray-400 mb-1.5";
 
-/* ── shared styles ─────────────────────────────────────────────────────────── */
-const btn = (bg, color = "#fff", border) => ({
-  padding: "0.5rem 1rem", background: bg, color, border: border || "none",
-  borderRadius: 6, cursor: "pointer", fontWeight: 500, fontSize: "0.875rem",
-  display: "flex", alignItems: "center", gap: "0.35rem",
-});
-const primaryBtn  = btn("#1565C0");
-const dangerBtn   = btn("#E53935");
-const greyBtn     = btn("#F5F5F5", "#555", "1px solid #ddd");
-const successBtn  = btn("#2E7D32");
-const inputStyle  = { width: "100%", padding: "0.6rem 0.875rem", border: "1px solid #ddd", borderRadius: 6, fontSize: "0.9rem", outline: "none", boxSizing: "border-box" };
-const labelStyle  = { display: "block", marginBottom: "0.35rem", fontSize: "0.875rem", fontWeight: 600, color: "#444" };
-const card        = { background: "#fff", borderRadius: 8, border: "1px solid #E0E0E0", padding: "1rem" };
-const formGroup   = { marginBottom: "1rem" };
-
-const imgSrc = (p) => {
-  if (!p) return null;
-  if (p.startsWith("http")) return p;
-  return p;
-};
-
-/* ── Tabs ──────────────────────────────────────────────────────────────────── */
 const TABS = [
-  { key: "sections",      label: "Sections" },
-  { key: "collections",   label: "Collections" },
-  { key: "price_tiers",   label: "Price Tiers" },
+  { key: "sections",      label: "Sections"      },
+  { key: "collections",   label: "Collections"   },
+  { key: "price_tiers",   label: "Price Tiers"   },
   { key: "why_choose_us", label: "Why Choose Us" },
-  { key: "stats",         label: "Stats Bar" },
-  { key: "flash_deals",   label: "Flash Deals" },
-  { key: "newsletter",    label: "Newsletter" },
+  { key: "stats",         label: "Stats Bar"     },
+  { key: "flash_deals",   label: "Flash Deals"   },
+  { key: "newsletter",    label: "Newsletter"    },
 ];
 
-/* ── Color picker helper ───────────────────────────────────────────────────── */
-const ColorField = ({ label, value, onChange }) => (
-  <div style={formGroup}>
-    <label style={labelStyle}>{label}</label>
-    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-      <input type="color" value={value?.startsWith("#") ? value : "#1565C0"} onChange={(e) => onChange(e.target.value)}
-        style={{ width: 40, height: 36, border: "1px solid #ddd", borderRadius: 4, cursor: "pointer", padding: 2 }} />
-      <input type="text" value={value || ""} onChange={(e) => onChange(e.target.value)}
-        placeholder="e.g. #1565C0 or linear-gradient(…)"
-        style={{ ...inputStyle, flex: 1 }} />
-    </div>
-  </div>
-);
+const imgSrc = (p) => p || null;
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   1. SECTIONS TAB — visibility + order
-═══════════════════════════════════════════════════════════════════════════ */
+// ── Color field ───────────────────────────────────────────────────────────────
+function ColorField({ label, value, onChange }) {
+  return (
+    <div>
+      <label className={labelCls}>{label}</label>
+      <div className="flex items-center gap-2">
+        <input type="color" value={value?.startsWith("#") ? value : "#1565C0"} onChange={(e) => onChange(e.target.value)}
+          className="w-10 h-9 border border-gray-200 rounded-lg cursor-pointer p-0.5" />
+        <input type="text" value={value || ""} onChange={(e) => onChange(e.target.value)}
+          placeholder="e.g. #1565C0 or linear-gradient(…)" className={inputCls} />
+      </div>
+    </div>
+  );
+}
+
+/* ── 1. Sections Tab ─────────────────────────────────────────────────────────*/
 function SectionsTab() {
-  const [items, setItems] = useState([]);
+  const [items, setItems]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(null);
+  const [saving, setSaving]   = useState(null);
 
   const load = async () => {
     setLoading(true);
     try {
       const res = await adminAxios.get("/api/admin/homepage");
-      const sectionConfigItems = (res.data.items || [])
-        .filter((i) => i.section === "section_config")
-        .sort((a, b) => a.order - b.order);
-      setItems(sectionConfigItems);
+      setItems((res.data.items || []).filter((i) => i.section === "section_config").sort((a, b) => a.order - b.order));
     } catch { toast.error("Failed to load sections"); }
     finally { setLoading(false); }
   };
@@ -96,7 +61,7 @@ function SectionsTab() {
     setSaving(item.id);
     try {
       await adminAxios.put(`/api/admin/homepage/${item.id}`, { isActive: !item.isActive });
-      setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, isActive: !i.isActive } : i));
+      setItems((p) => p.map((i) => i.id === item.id ? { ...i, isActive: !i.isActive } : i));
       toast.success("Updated");
     } catch { toast.error("Update failed"); }
     finally { setSaving(null); }
@@ -104,55 +69,45 @@ function SectionsTab() {
 
   const moveSection = async (idx, dir) => {
     const sorted = [...items];
-    const targetIdx = dir === "up" ? idx - 1 : idx + 1;
-    if (targetIdx < 0 || targetIdx >= sorted.length) return;
-
-    const a = sorted[idx];
-    const b = sorted[targetIdx];
-    const aOrder = b.order;
-    const bOrder = a.order;
-
+    const ti = dir === "up" ? idx - 1 : idx + 1;
+    if (ti < 0 || ti >= sorted.length) return;
+    const a = sorted[idx], b = sorted[ti];
     try {
       await Promise.all([
-        adminAxios.put(`/api/admin/homepage/${a.id}`, { order: aOrder }),
-        adminAxios.put(`/api/admin/homepage/${b.id}`, { order: bOrder }),
+        adminAxios.put(`/api/admin/homepage/${a.id}`, { order: b.order }),
+        adminAxios.put(`/api/admin/homepage/${b.id}`, { order: a.order }),
       ]);
-      setItems((prev) => {
-        const updated = prev.map((i) => {
-          if (i.id === a.id) return { ...i, order: aOrder };
-          if (i.id === b.id) return { ...i, order: bOrder };
-          return i;
-        });
-        return updated.sort((x, y) => x.order - y.order);
-      });
+      setItems((p) => p.map((i) => {
+        if (i.id === a.id) return { ...i, order: b.order };
+        if (i.id === b.id) return { ...i, order: a.order };
+        return i;
+      }).sort((x, y) => x.order - y.order));
     } catch { toast.error("Reorder failed"); }
   };
 
-  if (loading) return <div style={{ color: "#999", padding: "2rem" }}>Loading…</div>;
+  if (loading) return <div className="text-gray-400 py-8 text-center">Loading…</div>;
 
   return (
     <div>
-      <p style={{ color: "#666", fontSize: "0.875rem", marginBottom: "1rem" }}>
-        Toggle which sections appear on the home page and drag to reorder them.
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+      <p className="text-[13px] text-gray-500 mb-4">Toggle which sections appear on the home page and drag to reorder them.</p>
+      <div className="flex flex-col gap-2">
         {items.map((item, idx) => (
-          <div key={item.id} style={{ ...card, display: "flex", alignItems: "center", gap: "1rem", opacity: item.isActive ? 1 : 0.55 }}>
-            <div style={{ flex: 1 }}>
-              <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>{item.title || item.key}</span>
-              <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", color: "#999" }}>({item.key})</span>
+          <div key={item.id} className={`flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-xl shadow-sm transition-opacity ${item.isActive ? "opacity-100" : "opacity-55"}`}>
+            <div className="flex-1 min-w-0">
+              <span className="font-[700] text-[14px] text-gray-800">{item.title || item.key}</span>
+              <span className="ml-2 text-[11px] text-gray-400">({item.key})</span>
             </div>
-            <div style={{ display: "flex", gap: "0.4rem" }}>
-              <button onClick={() => moveSection(idx, "up")} disabled={idx === 0}
-                style={{ ...greyBtn, opacity: idx === 0 ? 0.4 : 1, padding: "0.4rem" }} title="Move up">
-                <MdKeyboardArrowUp />
+            <div className="flex gap-1.5">
+              <button onClick={() => moveSection(idx, "up")} disabled={idx === 0} className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 transition-colors">
+                <MdKeyboardArrowUp className="text-[16px]" />
               </button>
-              <button onClick={() => moveSection(idx, "down")} disabled={idx === items.length - 1}
-                style={{ ...greyBtn, opacity: idx === items.length - 1 ? 0.4 : 1, padding: "0.4rem" }} title="Move down">
-                <MdKeyboardArrowDown />
+              <button onClick={() => moveSection(idx, "down")} disabled={idx === items.length - 1} className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 transition-colors">
+                <MdKeyboardArrowDown className="text-[16px]" />
               </button>
-              <button onClick={() => toggleVisibility(item)} disabled={saving === item.id}
-                style={item.isActive ? successBtn : greyBtn} title={item.isActive ? "Hide section" : "Show section"}>
+              <button
+                onClick={() => toggleVisibility(item)} disabled={saving === item.id}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-[600] transition-colors ${item.isActive ? "bg-green-100 text-green-700 hover:bg-green-200" : "border border-gray-200 text-gray-500 hover:bg-gray-50"}`}
+              >
                 {item.isActive ? <MdVisibility /> : <MdVisibilityOff />}
                 {item.isActive ? "Visible" : "Hidden"}
               </button>
@@ -164,26 +119,30 @@ function SectionsTab() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   GENERIC CARD LIST — used for collections, price_tiers, why_choose_us, stats
-═══════════════════════════════════════════════════════════════════════════ */
+/* ── Generic Card List Tab ───────────────────────────────────────────────────*/
+const SECTION_TIPS = {
+  collection:   "Collections appear as category cards. Use 500 × 500 px images. Add a Link URL to filter products by category.",
+  price_tiers:  "Price tier cards (e.g. Under ₹199). Set maxPrice in Meta JSON: {\"maxPrice\": 199}. Link: /productListing?maxPrice=199",
+  why_choose_us:"Trust badges shown to customers. 3–5 items ideal. Title = benefit name, Subtitle = short description.",
+  stats:        "Trust numbers (e.g. 10,000+ Products). Title = the number/stat, Subtitle = the label below it. No images needed.",
+};
+
 function CardListTab({ section, fields }) {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null); // null | "create" | item-object
-  const [form, setForm] = useState({});
+  const [items, setItems]         = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [modal, setModal]         = useState(null);
+  const [form, setForm]           = useState({});
   const [imgUploading, setImgUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving]       = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting, setDeleting]   = useState(false);
   const fileRef = useRef();
 
   const load = async () => {
     setLoading(true);
     try {
       const res = await adminAxios.get("/api/admin/homepage");
-      const filtered = (res.data.items || []).filter((i) => i.section === section);
-      setItems(filtered.sort((a, b) => a.order - b.order));
+      setItems((res.data.items || []).filter((i) => i.section === section).sort((a, b) => a.order - b.order));
     } catch { toast.error("Failed to load items"); }
     finally { setLoading(false); }
   };
@@ -194,21 +153,14 @@ function CardListTab({ section, fields }) {
     setForm({ section, key: "", title: "", subtitle: "", image: "", link: "", badge: "", badgeColor: "#1565C0", bgColor: "#F5F7FF", textColor: "#111827", isActive: true, order: items.length + 1, meta: "" });
     setModal("create");
   };
-
-  const openEdit = (item) => {
-    setForm({ ...item, meta: item.meta || "" });
-    setModal("edit");
-  };
-
+  const openEdit = (item) => { setForm({ ...item, meta: item.meta || "" }); setModal("edit"); };
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files[0]; if (!file) return;
     setImgUploading(true);
     try {
-      const fd = new FormData();
-      fd.append("image", file);
+      const fd = new FormData(); fd.append("image", file);
       const res = await adminAxios.post("/api/admin/homepage/upload", fd);
       set("image", res.data.image);
     } catch { toast.error("Upload failed"); }
@@ -221,11 +173,11 @@ function CardListTab({ section, fields }) {
     try {
       if (modal === "create") {
         const res = await adminAxios.post("/api/admin/homepage", form);
-        setItems((prev) => [...prev, res.data.item].sort((a, b) => a.order - b.order));
+        setItems((p) => [...p, res.data.item].sort((a, b) => a.order - b.order));
         toast.success("Item created");
       } else {
         await adminAxios.put(`/api/admin/homepage/${form.id}`, form);
-        setItems((prev) => prev.map((i) => i.id === form.id ? { ...i, ...form } : i));
+        setItems((p) => p.map((i) => i.id === form.id ? { ...i, ...form } : i));
         toast.success("Item updated");
       }
       setModal(null);
@@ -238,99 +190,86 @@ function CardListTab({ section, fields }) {
     setDeleting(true);
     try {
       await adminAxios.delete(`/api/admin/homepage/${deleteTarget.id}`);
-      setItems((prev) => prev.filter((i) => i.id !== deleteTarget.id));
-      toast.success("Deleted");
-      setDeleteTarget(null);
+      setItems((p) => p.filter((i) => i.id !== deleteTarget.id));
+      toast.success("Deleted"); setDeleteTarget(null);
     } catch { toast.error("Delete failed"); }
     finally { setDeleting(false); }
   };
 
   const moveItem = async (idx, dir) => {
-    const sorted = [...items];
-    const targetIdx = dir === "up" ? idx - 1 : idx + 1;
-    if (targetIdx < 0 || targetIdx >= sorted.length) return;
-    const a = sorted[idx], b = sorted[targetIdx];
+    const ti = dir === "up" ? idx - 1 : idx + 1;
+    if (ti < 0 || ti >= items.length) return;
+    const a = items[idx], b = items[ti];
     try {
       await Promise.all([
         adminAxios.put(`/api/admin/homepage/${a.id}`, { order: b.order }),
         adminAxios.put(`/api/admin/homepage/${b.id}`, { order: a.order }),
       ]);
-      setItems((prev) => {
-        const updated = prev.map((i) => {
-          if (i.id === a.id) return { ...i, order: b.order };
-          if (i.id === b.id) return { ...i, order: a.order };
-          return i;
-        });
-        return updated.sort((x, y) => x.order - y.order);
-      });
+      setItems((p) => p.map((i) => {
+        if (i.id === a.id) return { ...i, order: b.order };
+        if (i.id === b.id) return { ...i, order: a.order };
+        return i;
+      }).sort((x, y) => x.order - y.order));
     } catch { toast.error("Reorder failed"); }
   };
 
   const toggleActive = async (item) => {
     try {
       await adminAxios.put(`/api/admin/homepage/${item.id}`, { isActive: !item.isActive });
-      setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, isActive: !i.isActive } : i));
+      setItems((p) => p.map((i) => i.id === item.id ? { ...i, isActive: !i.isActive } : i));
     } catch { toast.error("Update failed"); }
   };
 
-  if (loading) return <div style={{ color: "#999", padding: "2rem" }}>Loading…</div>;
-
-  const sectionTips = {
-    collection: "Collections appear as category cards (e.g. Men's, Women's). Use 500 × 500 px images. Add a Link URL to filter products by category.",
-    price_tiers: "Price tier cards (e.g. Under ₹199). No image needed — set background colors. Set maxPrice in Meta JSON: {\"maxPrice\": 199}. Link: /productListing?maxPrice=199",
-    why_choose_us: "Trust badges shown to customers. 3–5 items ideal. Title = benefit name, Subtitle = short description. Use colors to style each card.",
-    stats: "Trust numbers (e.g. 10,000+ Products). Title = the number/stat, Subtitle = the label below it. No images needed.",
-  };
+  if (loading) return <div className="text-gray-400 py-8 text-center">Loading…</div>;
 
   return (
     <div>
-      {sectionTips[section] && (
-        <div style={{ background: "#FFF8E1", border: "1px solid #FFE082", borderRadius: 8, padding: "0.65rem 1rem", marginBottom: "1rem", fontSize: "0.82rem", color: "#5D4037" }}>
-          💡 <strong>Tip:</strong> {sectionTips[section]}
+      {SECTION_TIPS[section] && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-[12px] text-amber-800">
+          💡 <strong>Tip:</strong> {SECTION_TIPS[section]}
         </div>
       )}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
-        <button onClick={openCreate} style={primaryBtn}><MdAdd /> Add Item</button>
+      <div className="flex justify-end mb-4">
+        <button onClick={openCreate} className="flex items-center gap-1.5 px-4 py-2 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors">
+          <MdAdd className="text-[16px]" /> Add Item
+        </button>
       </div>
 
       {items.length === 0 ? (
-        <div style={{ ...card, textAlign: "center", padding: "3rem", color: "#999", border: "2px dashed #E0E0E0" }}>
+        <div className="text-center py-12 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
           No items yet. Click "Add Item" to create one.
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: "1rem" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((item, idx) => (
-            <div key={item.id} style={{ ...card, position: "relative", opacity: item.isActive ? 1 : 0.6 }}>
+            <div key={item.id} className={`bg-white border border-gray-100 rounded-2xl p-4 shadow-sm transition-opacity ${item.isActive ? "opacity-100" : "opacity-60"}`}>
               {item.image && (
-                <img src={imgSrc(item.image)} alt={item.title}
-                  style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 6, marginBottom: "0.75rem" }} />
+                <img src={imgSrc(item.image)} alt={item.title} className="w-full h-[110px] object-cover rounded-xl border border-gray-100 mb-3" />
               )}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 700, fontSize: "0.95rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.title || item.key}</p>
-                  {item.subtitle && <p style={{ fontSize: "0.8rem", color: "#666", marginTop: 2 }}>{item.subtitle}</p>}
+              <div className="flex justify-between items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-[700] text-[14px] text-gray-800 truncate">{item.title || item.key}</p>
+                  {item.subtitle && <p className="text-[12px] text-gray-500 mt-0.5">{item.subtitle}</p>}
                   {item.badge && (
-                    <span style={{ display: "inline-block", marginTop: 4, fontSize: "0.7rem", fontWeight: 700, background: item.badgeColor || "#1565C0", color: "#fff", borderRadius: 99, padding: "0.1rem 0.5rem" }}>
+                    <span className="inline-block mt-1 text-[10px] font-[700] text-white rounded-full px-2 py-0.5" style={{ background: item.badgeColor || "#1565C0" }}>
                       {item.badge}
                     </span>
                   )}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", marginLeft: "0.5rem" }}>
-                  <button onClick={() => openEdit(item)} style={{ ...greyBtn, padding: "0.3rem 0.5rem" }} title="Edit"><MdEdit /></button>
-                  <button onClick={() => toggleActive(item)} style={{ ...greyBtn, padding: "0.3rem 0.5rem" }} title={item.isActive ? "Hide" : "Show"}>
-                    {item.isActive ? <MdVisibility style={{ color: "#2E7D32" }} /> : <MdVisibilityOff style={{ color: "#999" }} />}
+                <div className="flex flex-col gap-1 flex-shrink-0">
+                  <button onClick={() => openEdit(item)} className="p-1.5 bg-blue-50 text-[#1565C0] rounded-lg hover:bg-blue-100 transition-colors"><MdEdit className="text-[14px]" /></button>
+                  <button onClick={() => toggleActive(item)} className="p-1.5 bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 transition-colors">
+                    {item.isActive ? <MdVisibility className="text-[14px] text-green-600" /> : <MdVisibilityOff className="text-[14px]" />}
                   </button>
-                  <button onClick={() => setDeleteTarget(item)} style={{ ...dangerBtn, padding: "0.3rem 0.5rem" }} title="Delete"><MdDelete /></button>
+                  <button onClick={() => setDeleteTarget(item)} className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors"><MdDelete className="text-[14px]" /></button>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: "0.3rem", marginTop: "0.6rem" }}>
-                <button onClick={() => moveItem(idx, "up")} disabled={idx === 0}
-                  style={{ ...greyBtn, flex: 1, justifyContent: "center", padding: "0.3rem", opacity: idx === 0 ? 0.4 : 1 }}>
-                  <MdKeyboardArrowUp />
+              <div className="flex gap-1.5 mt-3">
+                <button onClick={() => moveItem(idx, "up")} disabled={idx === 0} className="flex-1 flex justify-center p-1 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 transition-colors">
+                  <MdKeyboardArrowUp className="text-[16px]" />
                 </button>
-                <button onClick={() => moveItem(idx, "down")} disabled={idx === items.length - 1}
-                  style={{ ...greyBtn, flex: 1, justifyContent: "center", padding: "0.3rem", opacity: idx === items.length - 1 ? 0.4 : 1 }}>
-                  <MdKeyboardArrowDown />
+                <button onClick={() => moveItem(idx, "down")} disabled={idx === items.length - 1} className="flex-1 flex justify-center p-1 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 transition-colors">
+                  <MdKeyboardArrowDown className="text-[16px]" />
                 </button>
               </div>
             </div>
@@ -340,96 +279,67 @@ function CardListTab({ section, fields }) {
 
       {/* Create / Edit Modal */}
       {modal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}
-          onClick={(e) => { if (e.target === e.currentTarget) setModal(null); }}>
-          <div style={{ background: "#fff", borderRadius: 10, width: 520, maxHeight: "92vh", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.22)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem 1.5rem", borderBottom: "1px solid #E0E0E0" }}>
-              <h3 style={{ margin: 0, color: "#1A237E", fontSize: "1rem", fontWeight: 700 }}>
-                {modal === "create" ? "Add Item" : "Edit Item"}
-              </h3>
-              <button onClick={() => setModal(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.3rem", color: "#666" }}><MdClose /></button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-4" onClick={(e) => { if (e.target === e.currentTarget) setModal(null); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h3 className="text-[15px] font-[800] text-[#1A237E]">{modal === "create" ? "Add Item" : "Edit Item"}</h3>
+              <button onClick={() => setModal(null)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500"><MdClose className="text-[18px]" /></button>
             </div>
-            <div style={{ padding: "1.5rem" }}>
-              <div style={formGroup}>
-                <label style={labelStyle}>Key <span style={{ color: "#E53935" }}>*</span></label>
-                <input style={inputStyle} value={form.key || ""} onChange={(e) => set("key", e.target.value)} placeholder="unique_identifier (no spaces)" />
+            <div className="p-6 flex flex-col gap-4">
+              <div>
+                <label className={labelCls}>Key *</label>
+                <input className={inputCls} value={form.key || ""} onChange={(e) => set("key", e.target.value)} placeholder="unique_identifier (no spaces)" />
               </div>
-
               {fields.includes("title") && (
-                <div style={formGroup}>
-                  <label style={labelStyle}>Title</label>
-                  <input style={inputStyle} value={form.title || ""} onChange={(e) => set("title", e.target.value)} placeholder="e.g. New Arrivals" />
-                </div>
+                <div><label className={labelCls}>Title</label><input className={inputCls} value={form.title || ""} onChange={(e) => set("title", e.target.value)} placeholder="e.g. New Arrivals" /></div>
               )}
-
               {fields.includes("subtitle") && (
-                <div style={formGroup}>
-                  <label style={labelStyle}>Subtitle / Description</label>
-                  <input style={inputStyle} value={form.subtitle || ""} onChange={(e) => set("subtitle", e.target.value)} placeholder="Short description" />
-                </div>
+                <div><label className={labelCls}>Subtitle / Description</label><input className={inputCls} value={form.subtitle || ""} onChange={(e) => set("subtitle", e.target.value)} placeholder="Short description" /></div>
               )}
-
               {fields.includes("image") && (
-                <div style={formGroup}>
-                  <label style={labelStyle}>Image</label>
-                  <p style={{ fontSize: "0.78rem", color: "#888", marginBottom: "0.4rem", marginTop: 0 }}>
-                    📐 Recommended: <strong>500 × 500 px</strong> (square). JPG or WebP for best quality &amp; speed.
-                  </p>
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
-                    {form.image && (
-                      <img src={imgSrc(form.image)} alt="" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 6, border: "1px solid #E0E0E0" }} />
-                    )}
-                    <div style={{ flex: 1 }}>
-                      <input type="text" style={{ ...inputStyle, marginBottom: "0.35rem" }} value={form.image || ""} onChange={(e) => set("image", e.target.value)} placeholder="Paste URL or upload below" />
-                      <button onClick={() => fileRef.current.click()} style={{ ...greyBtn, fontSize: "0.8rem" }}>
+                <div>
+                  <label className={labelCls}>Image</label>
+                  <p className="text-[11px] text-gray-400 mb-2">Recommended: 500 × 500 px (square). JPG or WebP.</p>
+                  <div className="flex gap-3 items-start">
+                    {form.image && <img src={imgSrc(form.image)} alt="" className="w-20 h-14 object-cover rounded-xl border border-gray-200 flex-shrink-0" />}
+                    <div className="flex-1 space-y-2">
+                      <input type="text" className={inputCls} value={form.image || ""} onChange={(e) => set("image", e.target.value)} placeholder="Paste URL or upload below" />
+                      <button onClick={() => fileRef.current.click()} className="px-3 py-2 border border-gray-200 text-[12px] font-[600] text-gray-600 rounded-xl hover:bg-gray-50 transition-colors">
                         {imgUploading ? "Uploading…" : "Upload Image"}
                       </button>
-                      <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageUpload} />
+                      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                     </div>
                   </div>
                 </div>
               )}
-
               {fields.includes("link") && (
-                <div style={formGroup}>
-                  <label style={labelStyle}>Link URL</label>
-                  <input style={inputStyle} value={form.link || ""} onChange={(e) => set("link", e.target.value)} placeholder="e.g. /productListing?sort=newest" />
-                </div>
+                <div><label className={labelCls}>Link URL</label><input className={inputCls} value={form.link || ""} onChange={(e) => set("link", e.target.value)} placeholder="e.g. /productListing?sort=newest" /></div>
               )}
-
               {fields.includes("badge") && (
-                <div style={formGroup}>
-                  <label style={labelStyle}>Badge Text</label>
-                  <input style={inputStyle} value={form.badge || ""} onChange={(e) => set("badge", e.target.value)} placeholder="e.g. Just In" />
-                </div>
+                <div><label className={labelCls}>Badge Text</label><input className={inputCls} value={form.badge || ""} onChange={(e) => set("badge", e.target.value)} placeholder="e.g. Just In" /></div>
               )}
-
               {fields.includes("colors") && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                  <ColorField label="Background Color / Gradient" value={form.bgColor} onChange={(v) => set("bgColor", v)} />
-                  <ColorField label="Text / Icon Color" value={form.textColor} onChange={(v) => set("textColor", v)} />
-                  <ColorField label="Badge / Border Color" value={form.badgeColor} onChange={(v) => set("badgeColor", v)} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ColorField label="Background Color / Gradient" value={form.bgColor}    onChange={(v) => set("bgColor",    v)} />
+                  <ColorField label="Text / Icon Color"            value={form.textColor}  onChange={(v) => set("textColor",  v)} />
+                  <ColorField label="Badge / Border Color"         value={form.badgeColor} onChange={(v) => set("badgeColor", v)} />
                 </div>
               )}
-
               {fields.includes("meta") && (
-                <div style={formGroup}>
-                  <label style={labelStyle}>Meta (JSON — e.g. maxPrice, icon)</label>
-                  <textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical", fontFamily: "monospace" }}
-                    value={form.meta || ""} onChange={(e) => set("meta", e.target.value)}
-                    placeholder='{"maxPrice": 499}' />
+                <div>
+                  <label className={labelCls}>Meta (JSON — e.g. maxPrice, icon)</label>
+                  <textarea rows={3} className={`${inputCls} resize-y font-mono`} value={form.meta || ""} onChange={(e) => set("meta", e.target.value)} placeholder='{"maxPrice": 499}' />
                 </div>
               )}
-
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <input type="checkbox" id="isActive" checked={!!form.isActive} onChange={(e) => set("isActive", e.target.checked)} />
-                <label htmlFor="isActive" style={{ fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" }}>Active (visible)</label>
-              </div>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input type="checkbox" checked={!!form.isActive} onChange={(e) => set("isActive", e.target.checked)} className="w-4 h-4 accent-[#1565C0]" />
+                <span className="text-[13px] font-[500] text-gray-700">Active (visible)</span>
+              </label>
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", padding: "1rem 1.5rem", borderTop: "1px solid #E0E0E0" }}>
-              <button onClick={() => setModal(null)} style={greyBtn}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ ...primaryBtn, opacity: saving ? 0.7 : 1 }}>
-                {saving ? "Saving…" : <><MdSave /> Save</>}
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
+              <button onClick={() => setModal(null)} className="px-5 py-2.5 border border-gray-200 text-[13px] font-[600] text-gray-600 rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+              <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 px-5 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-60">
+                <MdSave className="text-[15px]" />{saving ? "Saving…" : "Save"}
               </button>
             </div>
           </div>
@@ -438,17 +348,13 @@ function CardListTab({ section, fields }) {
 
       {/* Delete confirm */}
       {deleteTarget && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
-          <div style={{ background: "#fff", borderRadius: 10, padding: "2rem", width: 360, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
-            <h3 style={{ color: "#1A237E", marginBottom: "0.75rem" }}>Delete Item</h3>
-            <p style={{ color: "#555", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
-              Are you sure you want to delete "<strong>{deleteTarget.title || deleteTarget.key}</strong>"? This cannot be undone.
-            </p>
-            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-              <button onClick={() => setDeleteTarget(null)} style={greyBtn}>Cancel</button>
-              <button onClick={handleDelete} disabled={deleting} style={{ ...dangerBtn, opacity: deleting ? 0.7 : 1 }}>
-                {deleting ? "Deleting…" : "Delete"}
-              </button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h3 className="text-[16px] font-[800] text-gray-800 mb-2">Delete Item</h3>
+            <p className="text-[13px] text-gray-500 mb-6">Delete <strong>"{deleteTarget.title || deleteTarget.key}"</strong>? This cannot be undone.</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setDeleteTarget(null)} className="px-5 py-2.5 border border-gray-200 text-[13px] font-[600] text-gray-600 rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+              <button onClick={handleDelete} disabled={deleting} className="px-5 py-2.5 bg-red-500 text-white text-[13px] font-[700] rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60">{deleting ? "Deleting…" : "Delete"}</button>
             </div>
           </div>
         </div>
@@ -457,14 +363,12 @@ function CardListTab({ section, fields }) {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   SINGLE-ITEM CONFIG TAB — flash_deals, newsletter (just one row to edit)
-═══════════════════════════════════════════════════════════════════════════ */
+/* ── Single Config Tab ───────────────────────────────────────────────────────*/
 function SingleConfigTab({ section, fields, description }) {
-  const [item, setItem] = useState(null);
-  const [form, setForm] = useState({});
+  const [item, setItem]   = useState(null);
+  const [form, setForm]   = useState({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving]   = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -485,61 +389,42 @@ function SingleConfigTab({ section, fields, description }) {
     setSaving(true);
     try {
       await adminAxios.put(`/api/admin/homepage/${item.id}`, form);
-      setItem((prev) => ({ ...prev, ...form }));
-      toast.success("Saved!");
+      setItem((p) => ({ ...p, ...form })); toast.success("Saved!");
     } catch { toast.error("Save failed"); }
     finally { setSaving(false); }
   };
 
-  if (loading) return <div style={{ color: "#999", padding: "2rem" }}>Loading…</div>;
-  if (!item)   return <div style={{ color: "#E53935", padding: "2rem" }}>Config not found. Please restart the server to re-seed.</div>;
+  if (loading) return <div className="text-gray-400 py-8 text-center">Loading…</div>;
+  if (!item) return <div className="text-red-500 py-8">Config not found. Please restart the server to re-seed.</div>;
 
   return (
-    <div style={{ maxWidth: 600 }}>
-      {description && <p style={{ color: "#666", fontSize: "0.875rem", marginBottom: "1.25rem" }}>{description}</p>}
-      <div style={card}>
+    <div className="max-w-lg">
+      {description && <p className="text-[13px] text-gray-500 mb-4">{description}</p>}
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4">
         {fields.includes("title") && (
-          <div style={formGroup}>
-            <label style={labelStyle}>Title</label>
-            <input style={inputStyle} value={form.title || ""} onChange={(e) => set("title", e.target.value)} />
-          </div>
+          <div><label className={labelCls}>Title</label><input className={inputCls} value={form.title || ""} onChange={(e) => set("title", e.target.value)} /></div>
         )}
         {fields.includes("subtitle") && (
-          <div style={formGroup}>
-            <label style={labelStyle}>Subtitle / Description</label>
-            <textarea style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} value={form.subtitle || ""} onChange={(e) => set("subtitle", e.target.value)} />
-          </div>
+          <div><label className={labelCls}>Subtitle / Description</label><textarea rows={3} className={`${inputCls} resize-y`} value={form.subtitle || ""} onChange={(e) => set("subtitle", e.target.value)} /></div>
         )}
         {fields.includes("badge") && (
-          <div style={formGroup}>
-            <label style={labelStyle}>Footer / Badge Text</label>
-            <input style={inputStyle} value={form.badge || ""} onChange={(e) => set("badge", e.target.value)} placeholder="e.g. No spam. Unsubscribe anytime." />
-          </div>
+          <div><label className={labelCls}>Footer / Badge Text</label><input className={inputCls} value={form.badge || ""} onChange={(e) => set("badge", e.target.value)} placeholder="e.g. No spam. Unsubscribe anytime." /></div>
         )}
         {fields.includes("link") && (
-          <div style={formGroup}>
-            <label style={labelStyle}>View All Link</label>
-            <input style={inputStyle} value={form.link || ""} onChange={(e) => set("link", e.target.value)} placeholder="/productListing?maxPrice=499" />
-          </div>
+          <div><label className={labelCls}>View All Link</label><input className={inputCls} value={form.link || ""} onChange={(e) => set("link", e.target.value)} placeholder="/productListing?maxPrice=499" /></div>
         )}
         {fields.includes("colors") && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-            <ColorField label="Background Color" value={form.bgColor} onChange={(v) => set("bgColor", v)} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ColorField label="Background Color" value={form.bgColor}   onChange={(v) => set("bgColor",   v)} />
             <ColorField label="Accent / Icon Color" value={form.textColor} onChange={(v) => set("textColor", v)} />
           </div>
         )}
         {fields.includes("meta") && (
-          <div style={formGroup}>
-            <label style={labelStyle}>Meta (JSON)</label>
-            <textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical", fontFamily: "monospace" }}
-              value={form.meta || ""} onChange={(e) => set("meta", e.target.value)}
-              placeholder='{"maxPrice": 499}' />
-          </div>
+          <div><label className={labelCls}>Meta (JSON)</label><textarea rows={3} className={`${inputCls} resize-y font-mono`} value={form.meta || ""} onChange={(e) => set("meta", e.target.value)} placeholder='{"maxPrice": 499}' /></div>
         )}
-
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.5rem" }}>
-          <button onClick={handleSave} disabled={saving} style={{ ...primaryBtn, opacity: saving ? 0.7 : 1 }}>
-            {saving ? "Saving…" : <><MdSave /> Save Changes</>}
+        <div className="flex justify-end pt-2 border-t border-gray-100">
+          <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 px-5 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-60">
+            <MdSave className="text-[15px]" />{saving ? "Saving…" : "Save Changes"}
           </button>
         </div>
       </div>
@@ -547,116 +432,60 @@ function SingleConfigTab({ section, fields, description }) {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   MAIN COMPONENT
-═══════════════════════════════════════════════════════════════════════════ */
+/* ── Main component ──────────────────────────────────────────────────────────*/
 export default function HomePageManagement() {
   const [tab, setTab] = useState("sections");
 
   const renderTab = () => {
     switch (tab) {
-      case "sections":
-        return <SectionsTab />;
-      case "collections":
-        return (
-          <CardListTab
-            section="collection"
-            fields={["title", "subtitle", "image", "link", "badge", "colors"]}
-          />
-        );
-      case "price_tiers":
-        return (
-          <CardListTab
-            section="price_tiers"
-            fields={["title", "subtitle", "link", "badge", "colors", "meta"]}
-          />
-        );
-      case "why_choose_us":
-        return (
-          <CardListTab
-            section="why_choose_us"
-            fields={["title", "subtitle", "colors", "meta"]}
-          />
-        );
-      case "stats":
-        return (
-          <CardListTab
-            section="stats"
-            fields={["title", "subtitle", "meta"]}
-          />
-        );
-      case "flash_deals":
-        return (
-          <SingleConfigTab
-            section="flash_deals"
-            fields={["title", "subtitle", "badge", "link", "colors", "meta"]}
-            description='Configure the "Flash Deals" section heading, subtitle, and price cap (set maxPrice in the Meta JSON).'
-          />
-        );
-      case "newsletter":
-        return (
-          <SingleConfigTab
-            section="newsletter"
-            fields={["title", "subtitle", "badge", "colors"]}
-            description="Configure the newsletter strip heading, description, and footer note."
-          />
-        );
-      default:
-        return null;
+      case "sections":      return <SectionsTab />;
+      case "collections":   return <CardListTab section="collection"   fields={["title", "subtitle", "image", "link", "badge", "colors"]} />;
+      case "price_tiers":   return <CardListTab section="price_tiers"  fields={["title", "subtitle", "link", "badge", "colors", "meta"]} />;
+      case "why_choose_us": return <CardListTab section="why_choose_us" fields={["title", "subtitle", "colors", "meta"]} />;
+      case "stats":         return <CardListTab section="stats"        fields={["title", "subtitle", "meta"]} />;
+      case "flash_deals":   return <SingleConfigTab section="flash_deals" fields={["title", "subtitle", "badge", "link", "colors", "meta"]} description='Configure the "Flash Deals" section heading, subtitle, and price cap (set maxPrice in the Meta JSON).' />;
+      case "newsletter":    return <SingleConfigTab section="newsletter" fields={["title", "subtitle", "badge", "colors"]} description="Configure the newsletter strip heading, description, and footer note." />;
+      default: return null;
     }
   };
 
   return (
-    <div>
+    <div className="space-y-4">
       <Toaster position="top-right" />
 
-      <div style={{ marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1A237E", margin: 0 }}>Home Page Management</h2>
-        <p style={{ color: "#666", fontSize: "0.85rem", marginTop: 4 }}>
-          All changes take effect immediately on the live home page — no code changes needed.
-        </p>
+      <div>
+        <h2 className="text-[16px] font-[800] text-[#1A237E]">Home Page Management</h2>
+        <p className="text-[13px] text-gray-400 mt-0.5">All changes take effect immediately on the live home page — no code changes needed.</p>
       </div>
 
-      {/* Admin setup guide */}
-      <details style={{ marginBottom: "1.5rem" }}>
-        <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.9rem", color: "#1565C0", background: "#E3F2FD", border: "1px solid #BBDEFB", borderRadius: 8, padding: "0.65rem 1rem", userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+      {/* Admin guide */}
+      <details className="group">
+        <summary className="cursor-pointer select-none flex items-center gap-2 px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl text-[13px] font-[600] text-[#1565C0] list-none">
           💡 How to build your homepage — Admin Guide (click to expand)
         </summary>
-        <div style={{ background: "#F8FBFF", border: "1px solid #BBDEFB", borderTop: "none", borderRadius: "0 0 8px 8px", padding: "1.25rem 1.5rem", fontSize: "0.83rem", color: "#333", lineHeight: 1.8 }}>
-          <p style={{ fontWeight: 700, marginBottom: "0.5rem", color: "#1A237E" }}>Step-by-step homepage setup:</p>
-          <ol style={{ margin: 0, paddingLeft: "1.4rem" }}>
-            <li><strong>Sliders tab (Admin → Sliders)</strong> — Upload your hero banner images first. Add 2–4 main slider images. Each should be 1920 × 600 px. Add a Link URL so the banner is clickable.</li>
-            <li><strong>Sections tab</strong> — Toggle which sections are visible and drag to reorder them. Only show sections that have content. Hide empty sections.</li>
-            <li><strong>Collections tab</strong> — "Shop by Collection" cards (e.g. Men's, Women's, Kids). Add 4–8 cards. Each card: Title + Image (500 × 500 px) + Link URL to a filtered product listing.</li>
-            <li><strong>Price Tiers tab</strong> — "Shop by Price" cards (e.g. Under ₹199). Set the <code>maxPrice</code> in the Meta JSON field: <code>{"{"}"maxPrice": 199{"}"}</code>. Add a Link URL like <code>/productListing?maxPrice=199</code>.</li>
-            <li><strong>Why Choose Us tab</strong> — Trust badges (e.g. Fast Delivery, Secure Payments). Add 3–5 items. Use the Meta JSON to set an icon: <code>{"{"}"icon": "delivery"{"}"}</code>.</li>
-            <li><strong>Stats Bar tab</strong> — Numbers that build trust (e.g. 10,000+ Products). Title = the number, Subtitle = the label.</li>
-            <li><strong>Flash Deals tab</strong> — Configure the flash deals section heading and set a max price in Meta: <code>{"{"}"maxPrice": 499{"}"}</code>.</li>
-            <li><strong>Newsletter tab</strong> — Configure the email subscription strip title and description.</li>
+        <div className="bg-[#F8FBFF] border border-blue-100 border-t-0 rounded-b-xl p-5 text-[12px] text-gray-700 leading-relaxed">
+          <p className="font-[700] text-[#1A237E] mb-2">Step-by-step homepage setup:</p>
+          <ol className="list-decimal pl-5 space-y-1.5">
+            <li><strong>Sliders (Admin → Sliders)</strong> — Upload hero banner images. 1920 × 600 px recommended.</li>
+            <li><strong>Sections tab</strong> — Toggle visibility and reorder sections.</li>
+            <li><strong>Collections tab</strong> — "Shop by Collection" cards. 500 × 500 px images + Link URL.</li>
+            <li><strong>Price Tiers tab</strong> — "Shop by Price" cards. Set <code>maxPrice</code> in Meta JSON.</li>
+            <li><strong>Why Choose Us tab</strong> — Trust badges. 3–5 items. Set icon in Meta JSON.</li>
+            <li><strong>Stats Bar tab</strong> — Trust numbers. Title = number, Subtitle = label.</li>
+            <li><strong>Flash Deals tab</strong> — Configure heading and max price in Meta JSON.</li>
+            <li><strong>Newsletter tab</strong> — Configure email subscription strip.</li>
           </ol>
-          <div style={{ marginTop: "1rem", padding: "0.75rem", background: "#FFF8E1", borderRadius: 6, borderLeft: "4px solid #F9A825" }}>
-            <strong>Responsiveness tips:</strong>
-            <ul style={{ margin: "0.3rem 0 0 1rem", paddingLeft: "1rem" }}>
-              <li>All images are auto-resized to fit mobile screens — upload high-quality originals.</li>
-              <li>Avoid text baked into images — use the Title/Subtitle fields for text so it's readable on mobile.</li>
-              <li>Test on a phone after saving — the site is fully responsive.</li>
-              <li>Keep section order logical: Slider → Categories → Collections → Flash Deals → Price Tiers → Newsletter.</li>
-            </ul>
+          <div className="mt-4 p-3 bg-amber-50 border-l-4 border-amber-400 rounded-r-xl text-[11px]">
+            <strong>Tips:</strong> Upload high-quality originals — images are auto-resized for mobile. Avoid baking text into images. Test on a phone after saving.
           </div>
         </div>
       </details>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem", borderBottom: "2px solid #E0E0E0", marginBottom: "1.5rem" }}>
+      {/* Tab bar */}
+      <div className="flex flex-wrap gap-0.5 border-b-2 border-gray-100">
         {TABS.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            style={{
-              padding: "0.6rem 1.1rem", background: "none", border: "none", cursor: "pointer",
-              fontWeight: tab === t.key ? 700 : 400,
-              color: tab === t.key ? "#1565C0" : "#666",
-              borderBottom: tab === t.key ? "2px solid #1565C0" : "2px solid transparent",
-              marginBottom: -2, fontSize: "0.9rem", transition: "all 0.15s",
-            }}>
+            className={`px-4 py-2.5 text-[13px] font-[600] border-b-2 -mb-px transition-colors ${tab === t.key ? "text-[#1565C0] border-[#1565C0]" : "text-gray-400 border-transparent hover:text-gray-600"}`}>
             {t.label}
           </button>
         ))}

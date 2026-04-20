@@ -1,32 +1,33 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import adminAxios from '../utils/adminAxios';
-import { imgUrl } from '../../utils/imageUrl';
+import { useEffect, useRef, useState } from "react";
+import { MdAdd, MdEdit, MdDelete, MdClose, MdArticle, MdImage } from "react-icons/md";
+import adminAxios from "../utils/adminAxios";
+import { imgUrl } from "../../utils/imageUrl";
+import toast, { Toaster } from "react-hot-toast";
+import EmptyState from "../../components/EmptyState";
+import TableRowSkeleton from "../../components/skeletons/TableRowSkeleton";
 
 const BASE_FORM = {
-  title: '', excerpt: '', content: '', author: 'InfixMart Team', published: false, image: '',
+  title: "", excerpt: "", content: "", author: "InfixMart Team", published: false, image: "",
 };
 
-const inputCls = {
-  width: '100%', padding: '8px 12px', border: '1px solid #ddd',
-  borderRadius: 6, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box',
-};
-const labelCls = {
-  display: 'block', fontSize: '0.8rem', fontWeight: 600,
-  color: '#555', marginBottom: 5,
-};
+const inputCls = "w-full px-3.5 py-2.5 text-[13px] text-gray-700 bg-[#F8FAFF] border border-gray-200 rounded-xl outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/10 transition-all";
+const labelCls = "block text-[11px] font-[700] uppercase tracking-wider text-gray-400 mb-1.5";
 
-// ── Form ─────────────────────────────────────────────────────────────────────
-const BlogForm = ({ initial, onSave, onCancel }) => {
-  const [form, setForm]         = useState(initial || BASE_FORM);
+const fmtDate = (d) =>
+  d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+// ── Form ──────────────────────────────────────────────────────────────────────
+function BlogForm({ initial, onSave, onCancel }) {
+  const [form, setForm]           = useState(initial || BASE_FORM);
   const [imageFile, setImageFile] = useState(null);
-  const [preview, setPreview]   = useState(initial?.image ? imgUrl(initial.image) : '');
-  const [saving, setSaving]     = useState(false);
-  const [error, setError]       = useState('');
+  const [preview, setPreview]     = useState(initial?.image ? imgUrl(initial.image) : "");
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState("");
   const fileRef = useRef();
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
@@ -37,364 +38,251 @@ const BlogForm = ({ initial, onSave, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.title.trim()) { setError('Title is required'); return; }
-    setSaving(true);
-    setError('');
-
+    if (!form.title.trim()) { setError("Title is required"); return; }
+    setSaving(true); setError("");
     const fd = new FormData();
-    fd.append('title',     form.title);
-    fd.append('excerpt',   form.excerpt);
-    fd.append('content',   form.content);
-    fd.append('author',    form.author);
-    fd.append('published', String(form.published));
-    if (imageFile) fd.append('image', imageFile);
-    else if (form.image) fd.append('image', form.image);
-
+    fd.append("title",     form.title);
+    fd.append("excerpt",   form.excerpt);
+    fd.append("content",   form.content);
+    fd.append("author",    form.author);
+    fd.append("published", String(form.published));
+    if (imageFile) fd.append("image", imageFile);
+    else if (form.image) fd.append("image", form.image);
     try {
-      if (initial?.id) {
-        await adminAxios.put(`/api/blog/${initial.id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      } else {
-        await adminAxios.post('/api/blog', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      }
+      if (initial?.id) await adminAxios.put(`/api/blog/${initial.id}`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+      else             await adminAxios.post("/api/blog", fd, { headers: { "Content-Type": "multipart/form-data" } });
       onSave();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save blog');
-    }
-    setSaving(false);
+    } catch (err) { setError(err.response?.data?.message || "Failed to save blog"); }
+    finally { setSaving(false); }
   };
 
   return (
-    <div style={{ background: '#fff', borderRadius: 8, boxShadow: '0 2px 12px rgba(0,0,0,0.1)', padding: '1.5rem', marginBottom: '1.5rem' }}>
-      <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#1A237E', marginBottom: '1.25rem' }}>
-        {initial?.id ? 'Edit Blog Post' : 'New Blog Post'}
-      </h2>
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-[15px] font-[800] text-[#1A237E]">{initial?.id ? "Edit Blog Post" : "New Blog Post"}</h3>
+        <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
+          <MdClose className="text-[18px]" />
+        </button>
+      </div>
 
-      {error && (
-        <div style={{ background: '#FFEBEE', color: '#C62828', padding: '8px 12px', borderRadius: 6, fontSize: '0.8rem', marginBottom: '1rem' }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="bg-red-50 border border-red-200 text-red-600 text-[12px] px-4 py-2.5 rounded-xl mb-4">{error}</div>}
 
-      <form onSubmit={handleSubmit}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-          {/* Title */}
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={labelCls}>Title *</label>
-            <input style={inputCls} value={form.title} onChange={(e) => set('title', e.target.value)} placeholder='Blog post title' />
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <label className={labelCls}>Title *</label>
+            <input className={inputCls} value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="Blog post title" />
           </div>
 
-          {/* Author */}
           <div>
-            <label style={labelCls}>Author</label>
-            <input style={inputCls} value={form.author} onChange={(e) => set('author', e.target.value)} placeholder='Author name' />
+            <label className={labelCls}>Author</label>
+            <input className={inputCls} value={form.author} onChange={(e) => set("author", e.target.value)} placeholder="Author name" />
           </div>
 
-          {/* Published toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 20 }}>
-            <label style={{ ...labelCls, marginBottom: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div
-                onClick={() => set('published', !form.published)}
-                style={{
-                  position: 'relative', width: 44, height: 24, borderRadius: 12,
-                  background: form.published ? '#00A651' : '#ccc', cursor: 'pointer', transition: 'background 0.2s',
-                }}
-              >
-                <span style={{
-                  position: 'absolute', top: 3, left: form.published ? 23 : 3,
-                  width: 18, height: 18, borderRadius: '50%', background: '#fff',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s',
-                }} />
-              </div>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: form.published ? '#00A651' : '#888' }}>
-                {form.published ? 'Published' : 'Draft'}
-              </span>
-            </label>
+          <div className="flex items-center gap-3 pt-5">
+            <button
+              type="button"
+              onClick={() => set("published", !form.published)}
+              className={`relative w-11 h-6 rounded-full transition-colors ${form.published ? "bg-green-500" : "bg-gray-300"}`}
+            >
+              <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${form.published ? "left-6" : "left-1"}`} />
+            </button>
+            <span className={`text-[13px] font-[600] ${form.published ? "text-green-600" : "text-gray-400"}`}>
+              {form.published ? "Published" : "Draft"}
+            </span>
           </div>
 
-          {/* Excerpt */}
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={labelCls}>Excerpt (short description)</label>
-            <textarea
-              rows={2}
-              style={{ ...inputCls, resize: 'vertical' }}
-              value={form.excerpt}
-              onChange={(e) => set('excerpt', e.target.value)}
-              placeholder='Brief summary shown in blog listings...'
-            />
+          <div className="sm:col-span-2">
+            <label className={labelCls}>Excerpt (short description)</label>
+            <textarea rows={2} className={`${inputCls} resize-y`} value={form.excerpt} onChange={(e) => set("excerpt", e.target.value)} placeholder="Brief summary shown in blog listings…" />
           </div>
 
-          {/* Content */}
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={labelCls}>Content</label>
-            <textarea
-              rows={10}
-              style={{ ...inputCls, resize: 'vertical', fontFamily: 'monospace', lineHeight: 1.6 }}
-              value={form.content}
-              onChange={(e) => set('content', e.target.value)}
-              placeholder='Write your full blog post here...'
-            />
+          <div className="sm:col-span-2">
+            <label className={labelCls}>Content</label>
+            <textarea rows={10} className={`${inputCls} resize-y font-mono leading-relaxed`} value={form.content} onChange={(e) => set("content", e.target.value)} placeholder="Write your full blog post here…" />
           </div>
 
-          {/* Image upload */}
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={labelCls}>Cover Image</label>
-            <p style={{ fontSize: '0.78rem', color: '#888', marginBottom: '0.4rem', marginTop: 0 }}>
-              📐 <strong>1200 × 630 px</strong> recommended (landscape, 1.9:1 ratio). Also used as the social share preview image. JPG or WebP.
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div className="sm:col-span-2">
+            <label className={labelCls}>Cover Image</label>
+            <p className="text-[11px] text-gray-400 mb-2">1200 × 630 px recommended (landscape 1.9:1). JPG or WebP.</p>
+            <div className="flex items-center gap-4 flex-wrap">
               {preview && (
-                <img src={preview} alt='preview' style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #eee' }} />
+                <div className="relative">
+                  <img src={preview} alt="preview" className="w-[120px] h-[80px] object-cover rounded-xl border border-gray-200" />
+                  <button type="button" onClick={() => { setPreview(""); setImageFile(null); set("image", ""); }} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-[11px] flex items-center justify-center hover:bg-red-600">×</button>
+                </div>
               )}
               <button
-                type='button'
+                type="button"
                 onClick={() => fileRef.current.click()}
-                style={{
-                  padding: '8px 16px', border: '1.5px dashed #1565C0', borderRadius: 6,
-                  color: '#1565C0', background: '#f0f5ff', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
-                }}
+                className="flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-[#1565C0] rounded-xl text-[#1565C0] text-[13px] font-[600] bg-[#F0F5FF] hover:bg-[#E8EFFE] transition-colors"
               >
-                {preview ? 'Change Image' : 'Upload Image'}
+                <MdImage className="text-[16px]" />{preview ? "Change Image" : "Upload Image"}
               </button>
-              <input ref={fileRef} type='file' accept='image/*' style={{ display: 'none' }} onChange={handleFile} />
-              {imageFile && <span style={{ fontSize: '0.75rem', color: '#555' }}>{imageFile.name}</span>}
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+              {imageFile && <span className="text-[12px] text-gray-500 truncate max-w-[160px]">{imageFile.name}</span>}
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-          <button
-            type='submit'
-            disabled={saving}
-            style={{
-              padding: '9px 24px', background: saving ? '#90CAF9' : '#1565C0',
-              color: '#fff', border: 'none', borderRadius: 6,
-              fontSize: '0.875rem', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {saving ? 'Saving…' : (initial?.id ? 'Update Post' : 'Publish Post')}
+        <div className="flex gap-3 pt-2 border-t border-gray-100">
+          <button type="submit" disabled={saving} className="px-5 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-60">
+            {saving ? "Saving…" : initial?.id ? "Update Post" : "Publish Post"}
           </button>
-          <button
-            type='button'
-            onClick={onCancel}
-            style={{
-              padding: '9px 20px', background: '#fff', color: '#555',
-              border: '1px solid #ddd', borderRadius: 6, fontSize: '0.875rem', cursor: 'pointer',
-            }}
-          >
+          <button type="button" onClick={onCancel} className="px-5 py-2.5 border border-gray-200 text-[13px] font-[600] text-gray-600 rounded-xl hover:bg-gray-50 transition-colors">
             Cancel
           </button>
         </div>
       </form>
     </div>
   );
-};
+}
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-const BlogManagement = () => {
-  const [blogs, setBlogs]       = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing]   = useState(null);
-  const [toast, setToast]       = useState('');
-
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3000);
-  };
+export default function BlogManagement() {
+  const [blogs,        setBlogs]        = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [showForm,     setShowForm]     = useState(false);
+  const [editing,      setEditing]      = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting,     setDeleting]     = useState(false);
 
   const fetchBlogs = async () => {
     setLoading(true);
     try {
-      const res = await adminAxios.get('/api/blog/admin/all');
+      const res = await adminAxios.get("/api/blog/admin/all");
       setBlogs(res.data?.blogs || []);
-    } catch {
-      setBlogs([]);
-    }
-    setLoading(false);
+    } catch { setBlogs([]); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { fetchBlogs(); }, []);
 
   const handleSave = () => {
-    setShowForm(false);
-    setEditing(null);
-    fetchBlogs();
-    showToast('Blog post saved!');
+    setShowForm(false); setEditing(null);
+    fetchBlogs(); toast.success("Blog post saved!");
   };
 
-  const handleDelete = async (id, title) => {
-    if (!window.confirm(`Delete "${title}"?`)) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await adminAxios.delete(`/api/blog/${id}`);
-      setBlogs((prev) => prev.filter((b) => b.id !== id));
-      showToast('Blog deleted');
-    } catch {
-      showToast('Failed to delete');
-    }
+      await adminAxios.delete(`/api/blog/${deleteTarget.id}`);
+      setBlogs((prev) => prev.filter((b) => b.id !== deleteTarget.id));
+      toast.success("Blog deleted"); setDeleteTarget(null);
+    } catch { toast.error("Failed to delete"); }
+    finally { setDeleting(false); }
   };
 
   const handleTogglePublish = async (blog) => {
     try {
       const fd = new FormData();
-      fd.append('title',     blog.title);
-      fd.append('excerpt',   blog.excerpt || '');
-      fd.append('content',   blog.content || '');
-      fd.append('author',    blog.author  || '');
-      fd.append('published', String(!blog.published));
-      fd.append('image',     blog.image   || '');
-      await adminAxios.put(`/api/blog/${blog.id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      fd.append("title",     blog.title);
+      fd.append("excerpt",   blog.excerpt  || "");
+      fd.append("content",   blog.content  || "");
+      fd.append("author",    blog.author   || "");
+      fd.append("published", String(!blog.published));
+      fd.append("image",     blog.image    || "");
+      await adminAxios.put(`/api/blog/${blog.id}`, fd, { headers: { "Content-Type": "multipart/form-data" } });
       setBlogs((prev) => prev.map((b) => b.id === blog.id ? { ...b, published: !b.published } : b));
-    } catch {
-      showToast('Failed to update status');
-    }
+    } catch { toast.error("Failed to update status"); }
   };
 
-  return (
-    <div style={{ maxWidth: 900 }}>
-      {/* Toast */}
-      {toast && (
-        <div style={{
-          position: 'fixed', top: 20, right: 20, zIndex: 9999,
-          background: toast.includes('Failed') ? '#E53935' : '#00A651',
-          color: '#fff', padding: '10px 20px', borderRadius: 8,
-          fontSize: '0.875rem', fontWeight: 600, boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-        }}>
-          {toast}
-        </div>
-      )}
+  const showingForm = showForm || !!editing;
 
-      {/* Header row */}
-      {!showForm && !editing && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <div>
-            <h2 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1A237E', margin: 0 }}>
-              {blogs.length} Blog Post{blogs.length !== 1 ? 's' : ''}
-            </h2>
-          </div>
-          <button
-            onClick={() => setShowForm(true)}
-            style={{
-              padding: '9px 20px', background: '#1565C0', color: '#fff',
-              border: 'none', borderRadius: 6, fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            + New Blog Post
+  return (
+    <div className="space-y-4">
+      <Toaster position="top-right" />
+
+      {/* Header */}
+      {!showingForm && (
+        <div className="flex items-center justify-between">
+          <h2 className="text-[16px] font-[800] text-[#1A237E]">
+            Blog Posts <span className="text-[13px] font-[400] text-gray-400 ml-2">({blogs.length} total)</span>
+          </h2>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 px-4 py-2 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors">
+            <MdAdd className="text-[16px]" /> New Post
           </button>
         </div>
       )}
 
-      {/* New form */}
-      {showForm && (
-        <BlogForm onSave={handleSave} onCancel={() => setShowForm(false)} />
-      )}
-
-      {/* Edit form */}
-      {editing && (
-        <BlogForm
-          initial={editing}
-          onSave={handleSave}
-          onCancel={() => setEditing(null)}
-        />
-      )}
+      {/* New / Edit form */}
+      {showForm  && <BlogForm onSave={handleSave} onCancel={() => setShowForm(false)} />}
+      {editing   && <BlogForm initial={editing} onSave={handleSave} onCancel={() => setEditing(null)} />}
 
       {/* Blog list */}
-      {!showForm && !editing && (
-        <div style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-          {loading ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: '#888', fontSize: '0.875rem' }}>
-              Loading blogs…
-            </div>
-          ) : blogs.length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: '#aaa' }}>
-              <p style={{ fontSize: '2rem', marginBottom: 8 }}>📝</p>
-              <p style={{ fontWeight: 600 }}>No blog posts yet</p>
-              <p style={{ fontSize: '0.8rem' }}>Click "New Blog Post" to create your first post.</p>
-            </div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      {!showingForm && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-[13px]">
               <thead>
-                <tr style={{ background: '#F5F7FF', borderBottom: '2px solid #e8ecf8' }}>
-                  {['Cover', 'Title', 'Author', 'Status', 'Date', 'Actions'].map((h) => (
-                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: '#1A237E', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      {h}
-                    </th>
+                <tr className="bg-[#F8FAFF] border-b border-gray-100">
+                  {["Cover", "Title", "Author", "Status", "Date", "Actions"].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left text-[11px] font-[700] uppercase tracking-wider text-gray-400 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {blogs.map((blog, i) => (
-                  <tr key={blog.id} style={{ borderBottom: i < blogs.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
-                    <td style={{ padding: '10px 14px' }}>
-                      {blog.image ? (
-                        <img
-                          src={imgUrl(blog.image)}
-                          alt={blog.title}
-                          style={{ width: 64, height: 44, objectFit: 'cover', borderRadius: 5, border: '1px solid #eee' }}
-                        />
-                      ) : (
-                        <div style={{ width: 64, height: 44, background: '#f0f0f0', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-                          📝
+                {loading
+                  ? Array.from({ length: 5 }).map((_, i) => <TableRowSkeleton key={i} cols={6} />)
+                  : blogs.length === 0
+                  ? (
+                    <tr><td colSpan={6}>
+                      <EmptyState icon={<MdArticle />} title="No blog posts yet" subtitle='Click "New Post" to publish your first article.' />
+                    </td></tr>
+                  )
+                  : blogs.map((blog) => (
+                    <tr key={blog.id} className="border-b border-gray-50 hover:bg-[#F8FAFF] transition-colors">
+                      <td className="px-4 py-3">
+                        {blog.image ? (
+                          <img src={imgUrl(blog.image)} alt={blog.title} className="w-16 h-11 object-cover rounded-lg border border-gray-200" />
+                        ) : (
+                          <div className="w-16 h-11 bg-[#E8EAF6] rounded-lg flex items-center justify-center text-[#7986CB]">
+                            <MdArticle className="text-[20px]" />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 max-w-[260px]">
+                        <p className="font-[700] text-[#1A237E] truncate">{blog.title}</p>
+                        {blog.excerpt && <p className="text-[12px] text-gray-400 truncate mt-0.5">{blog.excerpt}</p>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{blog.author}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleTogglePublish(blog)}
+                          className={`px-2.5 py-0.5 rounded-full text-[11px] font-[700] transition-colors ${blog.published ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-amber-100 text-amber-700 hover:bg-amber-200"}`}
+                        >
+                          {blog.published ? "Published" : "Draft"}
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-gray-400 text-[12px] whitespace-nowrap">{fmtDate(blog.createdAt)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button onClick={() => setEditing(blog)} className="p-1.5 bg-blue-50 text-[#1565C0] rounded-lg hover:bg-blue-100 transition-colors"><MdEdit className="text-[15px]" /></button>
+                          <button onClick={() => setDeleteTarget(blog)} className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors"><MdDelete className="text-[15px]" /></button>
                         </div>
-                      )}
-                    </td>
-                    <td style={{ padding: '10px 14px', maxWidth: 260 }}>
-                      <p style={{ fontWeight: 600, fontSize: '0.875rem', color: '#1A237E', margin: '0 0 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {blog.title}
-                      </p>
-                      {blog.excerpt && (
-                        <p style={{ fontSize: '0.75rem', color: '#888', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {blog.excerpt}
-                        </p>
-                      )}
-                    </td>
-                    <td style={{ padding: '10px 14px', fontSize: '0.8rem', color: '#555' }}>{blog.author}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <button
-                        onClick={() => handleTogglePublish(blog)}
-                        style={{
-                          padding: '3px 10px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                          fontSize: '0.75rem', fontWeight: 700,
-                          background: blog.published ? '#E8F5E9' : '#FFF3E0',
-                          color: blog.published ? '#2E7D32' : '#E65100',
-                        }}
-                      >
-                        {blog.published ? 'Published' : 'Draft'}
-                      </button>
-                    </td>
-                    <td style={{ padding: '10px 14px', fontSize: '0.75rem', color: '#888', whiteSpace: 'nowrap' }}>
-                      {new Date(blog.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          onClick={() => setEditing(blog)}
-                          style={{
-                            padding: '5px 12px', background: '#EEF4FF', color: '#1565C0',
-                            border: '1px solid #c7d9f8', borderRadius: 5, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(blog.id, blog.title)}
-                          style={{
-                            padding: '5px 12px', background: '#FFEBEE', color: '#C62828',
-                            border: '1px solid #ffcdd2', borderRadius: 5, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
-          )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h3 className="text-[16px] font-[800] text-gray-800 mb-2">Delete Blog Post</h3>
+            <p className="text-[13px] text-gray-500 mb-6">Delete <strong>"{deleteTarget.title}"</strong>? This cannot be undone.</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setDeleteTarget(null)} className="px-5 py-2.5 border border-gray-200 text-[13px] font-[600] text-gray-600 rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+              <button onClick={handleDelete} disabled={deleting} className="px-5 py-2.5 bg-red-500 text-white text-[13px] font-[700] rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60">{deleting ? "Deleting…" : "Delete"}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
-};
-
-export default BlogManagement;
+}

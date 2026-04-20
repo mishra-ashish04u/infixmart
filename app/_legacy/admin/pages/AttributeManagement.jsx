@@ -5,11 +5,7 @@ import { MdAdd, MdDelete, MdEdit, MdCheck, MdClose } from "react-icons/md";
 import adminAxios from "../utils/adminAxios";
 import toast, { Toaster } from "react-hot-toast";
 
-const inputStyle = { padding: "0.55rem 0.75rem", border: "1px solid #ddd", borderRadius: 6, fontSize: "0.875rem", outline: "none" };
-const primaryBtn = { padding: "0.55rem 0.9rem", background: "#1565C0", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 500, fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.3rem" };
-const dangerIcon = { background: "#FFEBEE", border: "none", borderRadius: 6, padding: "0.3rem 0.4rem", cursor: "pointer", color: "#E53935", display: "flex", alignItems: "center" };
-
-// ── Inline edit for type name ──────────────────────────────────────────────────
+// ── Inline type name edit ─────────────────────────────────────────────────────
 function InlineNameEdit({ type, onSaved }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(type.name);
@@ -29,43 +25,48 @@ function InlineNameEdit({ type, onSaved }) {
 
   if (editing) {
     return (
-      <div style={{ display: "flex", gap: "0.3rem", alignItems: "center", flex: 1 }}>
-        <input value={val} onChange={(e) => setVal(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }} autoFocus style={{ ...inputStyle, flex: 1, fontSize: "0.875rem", padding: "0.25rem 0.5rem" }} />
-        <button onClick={save}   style={{ background: "#E8F5E9", border: "none", borderRadius: 4, padding: "0.3rem", cursor: "pointer", color: "#00A651" }}><MdCheck /></button>
-        <button onClick={() => setEditing(false)} style={{ background: "#FFEBEE", border: "none", borderRadius: 4, padding: "0.3rem", cursor: "pointer", color: "#E53935" }}><MdClose /></button>
+      <div className="flex gap-1.5 items-center flex-1">
+        <input
+          value={val} onChange={(e) => setVal(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
+          autoFocus
+          className="flex-1 px-2 py-1 text-[13px] border border-gray-200 rounded-lg outline-none focus:border-[#1565C0]"
+        />
+        <button onClick={save} className="p-1 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"><MdCheck className="text-[14px]" /></button>
+        <button onClick={() => setEditing(false)} className="p-1 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors"><MdClose className="text-[14px]" /></button>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flex: 1 }}>
-      <span style={{ fontWeight: 600, color: "#1A237E", fontSize: "0.9rem" }}>{type.name}</span>
-      <button onClick={() => setEditing(true)} style={{ background: "none", border: "none", cursor: "pointer", color: "#1565C0", display: "flex", alignItems: "center", padding: 2 }}>
-        <MdEdit style={{ fontSize: "0.85rem" }} />
+    <div className="flex items-center gap-1.5 flex-1">
+      <span className="font-[700] text-[#1A237E] text-[13px]">{type.name}</span>
+      <button onClick={() => setEditing(true)} className="p-0.5 text-[#1565C0] hover:text-[#0D47A1] transition-colors">
+        <MdEdit className="text-[13px]" />
       </button>
     </div>
   );
 }
 
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function AttributeManagement() {
-  const [types, setTypes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState(null); // selected AttributeType
-  const [newTypeName, setNewTypeName] = useState("");
-  const [addingType, setAddingType] = useState(false);
-  const [deletingType, setDeletingType] = useState(null);
-  const [newValue, setNewValue] = useState("");
-  const [addingValue, setAddingValue] = useState(false);
+  const [types,         setTypes]         = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [selected,      setSelected]      = useState(null);
+  const [newTypeName,   setNewTypeName]   = useState("");
+  const [addingType,    setAddingType]    = useState(false);
+  const [deletingType,  setDeletingType]  = useState(null);
+  const [newValue,      setNewValue]      = useState("");
+  const [addingValue,   setAddingValue]   = useState(false);
   const [deletingValue, setDeletingValue] = useState(null);
   const typeInputRef = useRef();
 
   const loadTypes = async () => {
     setLoading(true);
     try {
-      const res = await adminAxios.get("/api/admin/attributes");
+      const res  = await adminAxios.get("/api/admin/attributes");
       const data = res.data.data || [];
       setTypes(data);
-      // Keep selected in sync
       if (selected) {
         const updated = data.find((t) => t.id === selected.id);
         setSelected(updated || null);
@@ -76,57 +77,51 @@ export default function AttributeManagement() {
 
   useEffect(() => { loadTypes(); }, []);
 
-  // ── Add attribute type ──────────────────────────────────────────────────────
   const handleAddType = async () => {
     if (!newTypeName.trim()) return;
     setAddingType(true);
     try {
       const res = await adminAxios.post("/api/admin/attributes", { name: newTypeName.trim() });
       const newType = res.data.data;
-      setTypes((prev) => [...prev, newType]);
+      setTypes((p) => [...p, newType]);
       setNewTypeName("");
       typeInputRef.current?.focus();
       toast.success(`"${newType.name}" added`);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Already exists");
-    } finally { setAddingType(false); }
+    } catch (err) { toast.error(err.response?.data?.message || "Already exists"); }
+    finally { setAddingType(false); }
   };
 
-  // ── Delete attribute type ───────────────────────────────────────────────────
   const handleDeleteType = async (type) => {
     setDeletingType(type.id);
     try {
       await adminAxios.delete(`/api/admin/attributes/${type.id}`);
-      setTypes((prev) => prev.filter((t) => t.id !== type.id));
+      setTypes((p) => p.filter((t) => t.id !== type.id));
       if (selected?.id === type.id) setSelected(null);
       toast.success(`"${type.name}" deleted`);
     } catch { toast.error("Delete failed"); }
     finally { setDeletingType(null); }
   };
 
-  // ── Add attribute value ─────────────────────────────────────────────────────
   const handleAddValue = async () => {
     if (!newValue.trim() || !selected) return;
     setAddingValue(true);
     try {
       const res = await adminAxios.post(`/api/admin/attributes/${selected.id}/values`, { value: newValue.trim() });
-      const addedValue = res.data.data;
-      setSelected((prev) => ({ ...prev, values: [...(prev.values || []), addedValue] }));
-      setTypes((prev) => prev.map((t) => t.id === selected.id ? { ...t, values: [...(t.values || []), addedValue] } : t));
+      const added = res.data.data;
+      setSelected((p) => ({ ...p, values: [...(p.values || []), added] }));
+      setTypes((p) => p.map((t) => t.id === selected.id ? { ...t, values: [...(t.values || []), added] } : t));
       setNewValue("");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Add failed");
-    } finally { setAddingValue(false); }
+    } catch (err) { toast.error(err.response?.data?.message || "Add failed"); }
+    finally { setAddingValue(false); }
   };
 
-  // ── Delete attribute value ──────────────────────────────────────────────────
   const handleDeleteValue = async (valueId) => {
     setDeletingValue(valueId);
     try {
       await adminAxios.delete(`/api/admin/attributes/${selected.id}/values/${valueId}`);
-      const updatedValues = (selected.values || []).filter((v) => v.id !== valueId);
-      setSelected((prev) => ({ ...prev, values: updatedValues }));
-      setTypes((prev) => prev.map((t) => t.id === selected.id ? { ...t, values: updatedValues } : t));
+      const updated = (selected.values || []).filter((v) => v.id !== valueId);
+      setSelected((p) => ({ ...p, values: updated }));
+      setTypes((p) => p.map((t) => t.id === selected.id ? { ...t, values: updated } : t));
     } catch { toast.error("Delete failed"); }
     finally { setDeletingValue(null); }
   };
@@ -134,52 +129,41 @@ export default function AttributeManagement() {
   const selectedValues = selected?.values || [];
 
   return (
-    <div>
+    <div className="space-y-4">
       <Toaster position="top-right" />
 
-      <div style={{ display: "flex", alignItems: "center", marginBottom: "1.25rem" }}>
-        <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#1A237E", margin: 0 }}>Product Attributes</h2>
-      </div>
+      <h2 className="text-[16px] font-[800] text-[#1A237E]">Product Attributes</h2>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 3fr", gap: "1rem", alignItems: "start" }}>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
 
-        {/* ── LEFT: Attribute types list ── */}
-        <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #E0E0E0", overflow: "hidden" }}>
-          <div style={{ padding: "0.9rem 1.1rem", borderBottom: "1px solid #E0E0E0", background: "#F9FAFB" }}>
-            <span style={{ fontWeight: 600, color: "#1A237E", fontSize: "0.9rem" }}>Attribute Types</span>
-            <span style={{ marginLeft: 8, background: "#E3F2FD", color: "#1565C0", borderRadius: 99, padding: "0.1rem 0.45rem", fontSize: "0.73rem", fontWeight: 700 }}>{types.length}</span>
+        {/* ── LEFT: Attribute types ── */}
+        <div className="md:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 bg-[#F8FAFF] border-b border-gray-100">
+            <span className="font-[700] text-[#1A237E] text-[13px]">Attribute Types</span>
+            <span className="bg-blue-100 text-[#1565C0] text-[11px] font-[700] rounded-full px-2 py-0.5">{types.length}</span>
           </div>
 
           {loading ? (
-            <div style={{ padding: "2rem", textAlign: "center", color: "#999", fontSize: "0.875rem" }}>Loading…</div>
+            <div className="text-center py-8 text-gray-400 text-[13px]">Loading…</div>
           ) : types.length === 0 ? (
-            <div style={{ padding: "2rem", textAlign: "center", color: "#bbb", fontSize: "0.875rem" }}>No attribute types yet.</div>
+            <div className="text-center py-8 text-gray-400 text-[13px]">No attribute types yet.</div>
           ) : (
-            <div style={{ maxHeight: 400, overflowY: "auto" }}>
+            <div className="max-h-[400px] overflow-y-auto">
               {types.map((type) => (
                 <div
                   key={type.id}
                   onClick={() => setSelected(type)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "0.5rem",
-                    padding: "0.7rem 1rem", cursor: "pointer",
-                    background: selected?.id === type.id ? "#E3F2FD" : "transparent",
-                    borderLeft: selected?.id === type.id ? "4px solid #1565C0" : "4px solid transparent",
-                    borderBottom: "1px solid #F5F5F5",
-                    transition: "background 0.15s",
-                  }}
+                  className={`flex items-center gap-2 px-4 py-3 cursor-pointer border-b border-gray-50 transition-colors border-l-4 ${selected?.id === type.id ? "bg-blue-50 border-l-[#1565C0]" : "hover:bg-gray-50 border-l-transparent"}`}
                 >
                   <InlineNameEdit type={type} onSaved={loadTypes} />
-                  <span style={{ fontSize: "0.73rem", color: "#999", whiteSpace: "nowrap" }}>
-                    {(type.values || []).length} vals
-                  </span>
+                  <span className="text-[11px] text-gray-400 whitespace-nowrap">{(type.values || []).length} vals</span>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDeleteType(type); }}
                     disabled={deletingType === type.id}
-                    style={{ ...dangerIcon, opacity: deletingType === type.id ? 0.5 : 1 }}
+                    className="p-1 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-40 flex-shrink-0"
                     title="Delete type"
                   >
-                    <MdDelete style={{ fontSize: "0.9rem" }} />
+                    <MdDelete className="text-[13px]" />
                   </button>
                 </div>
               ))}
@@ -187,67 +171,61 @@ export default function AttributeManagement() {
           )}
 
           {/* Add type input */}
-          <div style={{ padding: "0.9rem 1rem", borderTop: "1px solid #E0E0E0", display: "flex", gap: "0.5rem" }}>
+          <div className="flex gap-2 px-4 py-3 border-t border-gray-100">
             <input
               ref={typeInputRef}
               value={newTypeName}
               onChange={(e) => setNewTypeName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleAddType(); }}
               placeholder="e.g. Color"
-              style={{ ...inputStyle, flex: 1, fontSize: "0.875rem" }}
+              className="flex-1 px-3 py-2 text-[13px] bg-[#F8FAFF] border border-gray-200 rounded-xl outline-none focus:border-[#1565C0] transition-all"
             />
-            <button onClick={handleAddType} disabled={addingType || !newTypeName.trim()} style={{ ...primaryBtn, opacity: addingType || !newTypeName.trim() ? 0.6 : 1, cursor: addingType || !newTypeName.trim() ? "not-allowed" : "pointer" }}>
-              {addingType ? "…" : <MdAdd />}
+            <button
+              onClick={handleAddType}
+              disabled={addingType || !newTypeName.trim()}
+              className="p-2 bg-[#1565C0] text-white rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {addingType ? <span className="text-[12px] px-0.5">…</span> : <MdAdd className="text-[18px]" />}
             </button>
           </div>
         </div>
 
-        {/* ── RIGHT: Values for selected type ── */}
-        <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #E0E0E0", overflow: "hidden" }}>
-          <div style={{ padding: "0.9rem 1.1rem", borderBottom: "1px solid #E0E0E0", background: "#F9FAFB", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        {/* ── RIGHT: Values ── */}
+        <div className="md:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 bg-[#F8FAFF] border-b border-gray-100">
             {selected ? (
               <>
-                <span style={{ fontWeight: 600, color: "#1A237E", fontSize: "0.9rem" }}>{selected.name} Values</span>
-                <span style={{ background: "#E3F2FD", color: "#1565C0", borderRadius: 99, padding: "0.1rem 0.45rem", fontSize: "0.73rem", fontWeight: 700 }}>{selectedValues.length}</span>
+                <span className="font-[700] text-[#1A237E] text-[13px]">{selected.name} Values</span>
+                <span className="bg-blue-100 text-[#1565C0] text-[11px] font-[700] rounded-full px-2 py-0.5">{selectedValues.length}</span>
               </>
             ) : (
-              <span style={{ color: "#999", fontSize: "0.875rem" }}>← Select an attribute type to manage its values</span>
+              <span className="text-gray-400 text-[13px]">← Select an attribute type to manage its values</span>
             )}
           </div>
 
           {!selected ? (
-            <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>🏷️</div>
-              <p style={{ color: "#999", fontSize: "0.9rem", margin: 0 }}>
-                Select an attribute type on the left to see and manage its values.
-              </p>
-              <p style={{ color: "#bbb", fontSize: "0.8rem", marginTop: "0.5rem" }}>
-                Examples: Color → Black, Blue, Silver · Size → S, M, L, XL · Weight → 500g, 1kg
-              </p>
+            <div className="py-16 px-8 text-center">
+              <div className="text-[2rem] mb-3">🏷️</div>
+              <p className="text-gray-400 text-[13px]">Select an attribute type on the left to see and manage its values.</p>
+              <p className="text-gray-300 text-[12px] mt-1">Examples: Color → Black, Blue · Size → S, M, L, XL · Weight → 500g, 1kg</p>
             </div>
           ) : (
             <>
-              {/* Values pills */}
-              <div style={{ padding: "1rem", minHeight: 180 }}>
+              <div className="p-4 min-h-[180px]">
                 {selectedValues.length === 0 ? (
-                  <div style={{ padding: "2rem", textAlign: "center", color: "#bbb", fontSize: "0.875rem" }}>
-                    No values yet. Add some below.
-                  </div>
+                  <div className="text-center py-8 text-gray-400 text-[13px]">No values yet. Add some below.</div>
                 ) : (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                  <div className="flex flex-wrap gap-2">
                     {selectedValues.map((v) => (
-                      <div
-                        key={v.id}
-                        style={{ display: "flex", alignItems: "center", gap: "0.3rem", background: "#F5F5F5", border: "1px solid #E0E0E0", borderRadius: 99, padding: "0.3rem 0.75rem", fontSize: "0.875rem", color: "#333" }}
-                      >
+                      <div key={v.id} className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 text-[13px] text-gray-700">
                         <span>{v.value}</span>
                         <button
                           onClick={() => handleDeleteValue(v.id)}
                           disabled={deletingValue === v.id}
-                          style={{ background: "none", border: "none", cursor: deletingValue === v.id ? "not-allowed" : "pointer", color: deletingValue === v.id ? "#ccc" : "#E53935", display: "flex", alignItems: "center", padding: 0, lineHeight: 1 }}
+                          className={`flex items-center transition-colors ${deletingValue === v.id ? "text-gray-300 cursor-not-allowed" : "text-red-400 hover:text-red-600"}`}
                           title="Remove"
                         >
-                          <MdClose style={{ fontSize: "0.85rem" }} />
+                          <MdClose className="text-[13px]" />
                         </button>
                       </div>
                     ))}
@@ -255,17 +233,20 @@ export default function AttributeManagement() {
                 )}
               </div>
 
-              {/* Add value input */}
-              <div style={{ padding: "0.9rem 1rem", borderTop: "1px solid #E0E0E0", display: "flex", gap: "0.5rem" }}>
+              <div className="flex gap-2 px-4 py-3 border-t border-gray-100">
                 <input
                   value={newValue}
                   onChange={(e) => setNewValue(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") handleAddValue(); }}
                   placeholder={`Add value to ${selected.name}…`}
-                  style={{ ...inputStyle, flex: 1 }}
+                  className="flex-1 px-3 py-2 text-[13px] bg-[#F8FAFF] border border-gray-200 rounded-xl outline-none focus:border-[#1565C0] transition-all"
                 />
-                <button onClick={handleAddValue} disabled={addingValue || !newValue.trim()} style={{ ...primaryBtn, opacity: addingValue || !newValue.trim() ? 0.6 : 1, cursor: addingValue || !newValue.trim() ? "not-allowed" : "pointer" }}>
-                  {addingValue ? "Adding…" : <><MdAdd /> Add</>}
+                <button
+                  onClick={handleAddValue}
+                  disabled={addingValue || !newValue.trim()}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <MdAdd className="text-[15px]" />{addingValue ? "Adding…" : "Add"}
                 </button>
               </div>
             </>
@@ -274,7 +255,7 @@ export default function AttributeManagement() {
       </div>
 
       {/* Tip */}
-      <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", background: "#E3F2FD", borderRadius: 6, border: "1px solid #BBDEFB", fontSize: "0.8rem", color: "#1565C0" }}>
+      <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-[12px] text-[#1565C0]">
         <strong>Tip:</strong> These attribute types and values feed the Variants section in the Product Add/Edit form. Create your attribute types here first, then use them when adding products.
       </div>
     </div>

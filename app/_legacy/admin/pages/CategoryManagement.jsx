@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MdEdit, MdDelete, MdClose, MdAdd } from "react-icons/md";
+import { MdEdit, MdDelete, MdClose, MdAdd, MdImage } from "react-icons/md";
 import adminAxios from "../utils/adminAxios";
 import TableRowSkeleton from "../../components/skeletons/TableRowSkeleton";
 import EmptyState from "../../components/EmptyState";
 import { required, minLength } from "../../hooks/useForm";
-
 
 const imgUrl = (p) => (p ? p : "");
 
@@ -17,24 +16,24 @@ function flatten(cats, depth = 0) {
   ]);
 }
 
-
-const primaryBtn = { padding: "0.55rem 1.1rem", background: "#1565C0", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 500, fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.35rem" };
-const greyBtn = { padding: "0.55rem 1.1rem", background: "#F5F5F5", color: "#555", border: "1px solid #ddd", borderRadius: 6, cursor: "pointer", fontWeight: 500, fontSize: "0.875rem" };
-const dangerBtn = { padding: "0.55rem 1.1rem", background: "#E53935", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 500, fontSize: "0.875rem" };
-const inputStyle = { width: "100%", padding: "0.6rem 0.875rem", border: "1px solid #ddd", borderRadius: 6, fontSize: "0.9rem", outline: "none", boxSizing: "border-box" };
-const labelStyle = { display: "block", marginBottom: "0.35rem", fontSize: "0.875rem", fontWeight: 500, color: "#333" };
+const DEPTH_BADGE = [
+  "bg-blue-100 text-[#1565C0]",
+  "bg-purple-100 text-purple-700",
+  "bg-amber-100 text-amber-700",
+];
+const DEPTH_LABEL = ["Root", "Sub", "Third"];
 
 export default function CategoryManagement() {
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(false);
-  const [editItem, setEditItem] = useState(null);
-  const [form, setForm] = useState({ name: "", parentCatId: "", parentCatName: "", images: [] });
+  const [categories,   setCategories]   = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [modal,        setModal]        = useState(false);
+  const [editItem,     setEditItem]     = useState(null);
+  const [form,         setForm]         = useState({ name: "", parentCatId: "", parentCatName: "", images: [] });
   const [imgUploading, setImgUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [nameError, setNameError] = useState('');
+  const [saving,       setSaving]       = useState(false);
+  const [nameError,    setNameError]    = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting,     setDeleting]     = useState(false);
   const fileRef = useRef();
 
   const loadCategories = async () => {
@@ -49,19 +48,19 @@ export default function CategoryManagement() {
   useEffect(() => { loadCategories(); }, []);
 
   const validateName = (val) =>
-    required('Category name is required')(val) || minLength(2, 'Name must be at least 2 characters')(val);
+    required("Category name is required")(val) || minLength(2, "Name must be at least 2 characters")(val);
 
   const openAdd = () => {
     setEditItem(null);
     setForm({ name: "", parentCatId: "", parentCatName: "", images: [] });
-    setNameError('');
+    setNameError("");
     setModal(true);
   };
 
   const openEdit = (cat) => {
     setEditItem(cat);
     setForm({ name: cat.name, parentCatId: cat.parentCatId ? String(cat.parentCatId) : "", parentCatName: cat.parentCatName || "", images: cat.images || [] });
-    setNameError('');
+    setNameError("");
     setModal(true);
   };
 
@@ -90,11 +89,8 @@ export default function CategoryManagement() {
     setSaving(true);
     try {
       const payload = { name: form.name.trim(), images: form.images, parentCatId: form.parentCatId || null, parentCatName: form.parentCatName || null };
-      if (editItem) {
-        await adminAxios.put(`/api/category/${editItem.id}`, payload);
-      } else {
-        await adminAxios.post("/api/category/createcat", payload);
-      }
+      if (editItem) await adminAxios.put(`/api/category/${editItem.id}`, payload);
+      else          await adminAxios.post("/api/category/createcat", payload);
       setModal(false);
       loadCategories();
     } catch (err) { console.error(err); }
@@ -112,7 +108,6 @@ export default function CategoryManagement() {
     finally { setDeleting(false); }
   };
 
-  // All categories except self + descendants when editing
   const parentOptions = editItem
     ? (() => {
         const isDescendant = (cat) => {
@@ -129,27 +124,36 @@ export default function CategoryManagement() {
 
   const autoSlug = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
+  const inputCls = "w-full px-3.5 py-2.5 text-[13px] text-gray-700 bg-[#F8FAFF] border border-gray-200 rounded-xl outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/10 transition-all";
+  const labelCls = "block text-[11px] font-[700] uppercase tracking-wider text-gray-400 mb-1.5";
+
   return (
-    <div>
+    <div className="space-y-4">
+
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-        <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#1A237E", margin: 0 }}>
+      <div className="flex items-center justify-between">
+        <h2 className="text-[16px] font-[800] text-[#1A237E]">
           All Categories
-          {!loading && <span style={{ fontWeight: 400, color: "#999", fontSize: "0.875rem", marginLeft: 8 }}>({categories.length})</span>}
+          {!loading && <span className="ml-2 text-[13px] font-[400] text-gray-400">({categories.length})</span>}
         </h2>
-        <button onClick={openAdd} style={primaryBtn}>
-          <MdAdd style={{ fontSize: "1.1rem" }} /> Add Category
+        <button
+          onClick={openAdd}
+          className="flex items-center gap-1.5 px-4 py-2 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors"
+        >
+          <MdAdd className="text-[16px]" /> Add Category
         </button>
       </div>
 
       {/* Table */}
-      <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #E0E0E0", overflow: "hidden" }}>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px]">
             <thead>
-              <tr style={{ background: "#F9FAFB" }}>
+              <tr className="bg-[#F8FAFF] border-b border-gray-100">
                 {["Image", "Name", "Parent", "Type", "Actions"].map((h) => (
-                  <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#555", borderBottom: "1px solid #E0E0E0", whiteSpace: "nowrap" }}>{h}</th>
+                  <th key={h} className="px-4 py-3 text-left text-[11px] font-[700] uppercase tracking-wider text-gray-400 whitespace-nowrap">
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -157,51 +161,40 @@ export default function CategoryManagement() {
               {loading
                 ? Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} cols={5} widths={[40, 160, 110, 70, 80]} />)
                 : categories.length === 0
-                ? <tr><td colSpan={5}><EmptyState title="No categories yet" subtitle="Add your first category to organise products." actionLabel="Add Category" onAction={openAdd} /></td></tr>
-                : categories.map((cat, i) => (
-                    <tr key={cat.id} style={{ background: i % 2 === 0 ? "#fff" : "#F9FAFB", borderBottom: "1px solid #F0F0F0" }}>
-                      {/* Image */}
-                      <td style={{ padding: "0.65rem 1rem" }}>
+                ? (
+                    <tr>
+                      <td colSpan={5}>
+                        <EmptyState title="No categories yet" subtitle="Add your first category to organise products." actionLabel="Add Category" onAction={openAdd} />
+                      </td>
+                    </tr>
+                  )
+                : categories.map((cat) => (
+                    <tr key={cat.id} className="border-b border-gray-50 hover:bg-[#F8FAFF] transition-colors">
+                      <td className="px-4 py-3">
                         {cat.images?.[0] ? (
-                          <img src={imgUrl(cat.images[0])} alt={cat.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", border: "1px solid #E0E0E0" }} />
+                          <img src={imgUrl(cat.images[0])} alt={cat.name} className="w-9 h-9 rounded-full object-cover border border-gray-200" />
                         ) : (
-                          <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#E8EAF6", display: "flex", alignItems: "center", justifyContent: "center", color: "#7986CB", fontWeight: 700, fontSize: "0.9rem" }}>
+                          <div className="w-9 h-9 rounded-full bg-[#E8EAF6] flex items-center justify-center text-[#7986CB] text-[13px] font-[700]">
                             {cat.name.charAt(0).toUpperCase()}
                           </div>
                         )}
                       </td>
-
-                      {/* Name indented */}
-                      <td style={{ padding: "0.65rem 1rem", paddingLeft: `${1 + cat.depth * 1.5}rem` }}>
-                        {cat.depth > 0 && <span style={{ color: "#ccc", marginRight: 4, fontSize: "0.8rem" }}>{"└ "}</span>}
-                        <span style={{ fontWeight: cat.depth === 0 ? 600 : 400, color: "#222" }}>{cat.name}</span>
-                      </td>
-
-                      {/* Parent */}
-                      <td style={{ padding: "0.65rem 1rem", color: "#666" }}>
-                        {cat.parentCatName || <span style={{ color: "#ccc" }}>—</span>}
-                      </td>
-
-                      {/* Type badge */}
-                      <td style={{ padding: "0.65rem 1rem" }}>
-                        <span style={{
-                          padding: "0.18rem 0.6rem", borderRadius: 999, fontSize: "0.73rem", fontWeight: 600,
-                          background: cat.depth === 0 ? "#E3F2FD" : cat.depth === 1 ? "#EDE7F6" : "#FFF8E1",
-                          color: cat.depth === 0 ? "#1565C0" : cat.depth === 1 ? "#6A1B9A" : "#E65100",
-                        }}>
-                          {["Root", "Sub", "Third"][cat.depth] ?? "Sub"}
+                      <td className="px-4 py-3" style={{ paddingLeft: `${1 + cat.depth * 1.5}rem` }}>
+                        {cat.depth > 0 && <span className="text-gray-300 mr-1 text-[11px]">└ </span>}
+                        <span className={cat.depth === 0 ? "font-[700] text-gray-800" : "font-[400] text-gray-600"}>
+                          {cat.name}
                         </span>
                       </td>
-
-                      {/* Actions */}
-                      <td style={{ padding: "0.65rem 1rem" }}>
-                        <div style={{ display: "flex", gap: "0.4rem" }}>
-                          <button onClick={() => openEdit(cat)} title="Edit" style={{ background: "#E3F2FD", border: "none", borderRadius: 6, padding: "0.35rem 0.5rem", cursor: "pointer", color: "#1565C0", fontSize: "1rem", display: "flex", alignItems: "center" }}>
-                            <MdEdit />
-                          </button>
-                          <button onClick={() => setDeleteTarget(cat)} title="Delete" style={{ background: "#FFEBEE", border: "none", borderRadius: 6, padding: "0.35rem 0.5rem", cursor: "pointer", color: "#E53935", fontSize: "1rem", display: "flex", alignItems: "center" }}>
-                            <MdDelete />
-                          </button>
+                      <td className="px-4 py-3 text-gray-500">{cat.parentCatName || <span className="text-gray-300">—</span>}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-[700] ${DEPTH_BADGE[cat.depth] ?? DEPTH_BADGE[1]}`}>
+                          {DEPTH_LABEL[cat.depth] ?? "Sub"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button onClick={() => openEdit(cat)} className="p-1.5 bg-blue-50 text-[#1565C0] rounded-lg hover:bg-blue-100 transition-colors"><MdEdit className="text-[15px]" /></button>
+                          <button onClick={() => setDeleteTarget(cat)} className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors"><MdDelete className="text-[15px]" /></button>
                         </div>
                       </td>
                     </tr>
@@ -213,71 +206,76 @@ export default function CategoryManagement() {
 
       {/* Add/Edit Modal */}
       {modal && (
-        <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}
-          onClick={(e) => { if (e.target === e.currentTarget) setModal(false); }}
-        >
-          <div style={{ background: "#fff", borderRadius: 10, width: 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.22)" }}>
-            {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.1rem 1.5rem", borderBottom: "1px solid #E0E0E0" }}>
-              <h3 style={{ margin: 0, color: "#1A237E", fontSize: "1rem", fontWeight: 600 }}>
-                {editItem ? "Edit Category" : "Add Category"}
-              </h3>
-              <button onClick={() => setModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#666", fontSize: "1.3rem", lineHeight: 1 }}><MdClose /></button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-4" onClick={(e) => { if (e.target === e.currentTarget) setModal(false); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h3 className="text-[15px] font-[800] text-[#1A237E]">{editItem ? "Edit Category" : "Add Category"}</h3>
+              <button onClick={() => setModal(false)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
+                <MdClose className="text-[18px]" />
+              </button>
             </div>
 
-            {/* Body */}
-            <div style={{ padding: "1.5rem" }}>
-              <label style={labelStyle}>Name <span style={{ color: "#E53935" }}>*</span></label>
-              <input
-                style={{ ...inputStyle, marginBottom: nameError ? "0.25rem" : "1rem", borderColor: nameError ? "#E53935" : "#ddd" }}
-                value={form.name}
-                onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setNameError(''); }}
-                onBlur={(e) => setNameError(validateName(e.target.value))}
-                placeholder="e.g. Electronics"
-              />
-              {nameError && <p style={{ color: "#E53935", fontSize: "0.78rem", marginBottom: "0.75rem" }}>{nameError}</p>}
-
-              <label style={labelStyle}>Slug (auto-generated)</label>
-              <input style={{ ...inputStyle, marginBottom: "1rem", background: "#F5F5F5", color: "#888" }} value={autoSlug} readOnly />
-
-              <label style={labelStyle}>Parent Category <span style={{ color: "#999", fontSize: "0.8rem" }}>(optional)</span></label>
-              <select style={{ ...inputStyle, marginBottom: "1rem", background: "#fff" }} value={form.parentCatId} onChange={handleParentChange}>
-                <option value="">— None (root category) —</option>
-                {parentOptions.map((c) => (
-                  <option key={c.id} value={String(c.id)}>
-                    {"  ".repeat(c.depth)}{c.depth > 0 ? "└ " : ""}{c.name}
-                  </option>
-                ))}
-              </select>
-
-              <label style={labelStyle}>Category Image</label>
-              <p style={{ fontSize: "0.78rem", color: "#888", marginBottom: "0.4rem", marginTop: 0 }}>
-                📐 <strong>300 × 300 px</strong> square recommended. Shown as the category thumbnail. JPG or WebP.
-              </p>
-              <div
-                onClick={() => fileRef.current.click()}
-                style={{ border: "2px dashed #BDBDBD", borderRadius: 8, padding: "1rem", textAlign: "center", cursor: "pointer", marginBottom: "0.75rem", background: "#FAFAFA", color: "#888", fontSize: "0.875rem" }}
-              >
-                {imgUploading ? "Uploading…" : "Click to upload image"}
+            <div className="p-6 flex flex-col gap-4">
+              <div>
+                <label className={labelCls}>Name <span className="text-red-500">*</span></label>
+                <input
+                  className={`${inputCls} ${nameError ? "border-red-400" : ""}`}
+                  value={form.name}
+                  onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setNameError(""); }}
+                  onBlur={(e) => setNameError(validateName(e.target.value))}
+                  placeholder="e.g. Electronics"
+                />
+                {nameError && <p className="text-red-500 text-[11px] mt-1">{nameError}</p>}
               </div>
-              <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageUpload} />
 
-              {form.images?.[0] && (
-                <div style={{ position: "relative", display: "inline-block", marginBottom: "0.5rem" }}>
-                  <img src={imgUrl(form.images[0])} alt="preview" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8, border: "1px solid #E0E0E0" }} />
-                  <button
-                    onClick={() => setForm((f) => ({ ...f, images: [] }))}
-                    style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", background: "#E53935", color: "#fff", border: "none", cursor: "pointer", fontSize: "0.75rem", display: "flex", alignItems: "center", justifyContent: "center" }}
-                  >×</button>
+              <div>
+                <label className={labelCls}>Slug (auto-generated)</label>
+                <input className={`${inputCls} opacity-60 cursor-not-allowed`} value={autoSlug} readOnly />
+              </div>
+
+              <div>
+                <label className={labelCls}>Parent Category <span className="text-gray-400 normal-case font-[500]">(optional)</span></label>
+                <select className={inputCls} value={form.parentCatId} onChange={handleParentChange}>
+                  <option value="">— None (root category) —</option>
+                  {parentOptions.map((c) => (
+                    <option key={c.id} value={String(c.id)}>
+                      {"  ".repeat(c.depth)}{c.depth > 0 ? "└ " : ""}{c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={labelCls}>Category Image</label>
+                <p className="text-[11px] text-gray-400 mb-2">300 × 300 px square recommended. JPG or WebP.</p>
+                <div
+                  onClick={() => fileRef.current.click()}
+                  className="border-2 border-dashed border-gray-200 rounded-xl p-5 text-center cursor-pointer hover:border-[#1565C0] hover:bg-[#F0F5FF] transition-all"
+                >
+                  <MdImage className="text-gray-300 text-[28px] mx-auto mb-1" />
+                  <p className="text-[12px] text-gray-400">{imgUploading ? "Uploading…" : "Click to upload image"}</p>
                 </div>
-              )}
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+
+                {form.images?.[0] && (
+                  <div className="relative inline-block mt-3">
+                    <img src={imgUrl(form.images[0])} alt="preview" className="w-20 h-20 object-cover rounded-xl border border-gray-200" />
+                    <button
+                      onClick={() => setForm((f) => ({ ...f, images: [] }))}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-[11px] flex items-center justify-center hover:bg-red-600"
+                    >×</button>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Footer */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", padding: "1rem 1.5rem", borderTop: "1px solid #E0E0E0" }}>
-              <button onClick={() => setModal(false)} style={greyBtn}>Cancel</button>
-              <button onClick={handleSave} disabled={saving || !!nameError || !form.name.trim()} style={{ ...primaryBtn, opacity: saving || !!nameError || !form.name.trim() ? 0.6 : 1, cursor: saving || !!nameError || !form.name.trim() ? "not-allowed" : "pointer" }}>
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
+              <button onClick={() => setModal(false)} className="px-5 py-2.5 border border-gray-200 text-[13px] font-[600] text-gray-600 rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+              <button
+                onClick={handleSave}
+                disabled={saving || !!nameError || !form.name.trim()}
+                className="px-5 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 {saving ? "Saving…" : "Save Category"}
               </button>
             </div>
@@ -287,16 +285,15 @@ export default function CategoryManagement() {
 
       {/* Delete confirm */}
       {deleteTarget && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
-          <div style={{ background: "#fff", borderRadius: 10, padding: "2rem", width: 380, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
-            <h3 style={{ color: "#1A237E", marginBottom: "0.75rem", fontSize: "1.05rem" }}>Delete Category</h3>
-            <p style={{ color: "#555", fontSize: "0.9rem", marginBottom: "1.5rem", lineHeight: 1.6 }}>
-              Are you sure you want to delete <strong>"{deleteTarget.name}"</strong>?{" "}
-              All subcategories will also be removed. This cannot be undone.
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h3 className="text-[16px] font-[800] text-gray-800 mb-2">Delete Category</h3>
+            <p className="text-[13px] text-gray-500 mb-6 leading-relaxed">
+              Delete <strong>"{deleteTarget.name}"</strong>? All subcategories will also be removed. This cannot be undone.
             </p>
-            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-              <button onClick={() => setDeleteTarget(null)} style={greyBtn}>Cancel</button>
-              <button onClick={handleDelete} disabled={deleting} style={{ ...dangerBtn, opacity: deleting ? 0.7 : 1 }}>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setDeleteTarget(null)} className="px-5 py-2.5 border border-gray-200 text-[13px] font-[600] text-gray-600 rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+              <button onClick={handleDelete} disabled={deleting} className="px-5 py-2.5 bg-red-500 text-white text-[13px] font-[700] rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60">
                 {deleting ? "Deleting…" : "Delete"}
               </button>
             </div>
