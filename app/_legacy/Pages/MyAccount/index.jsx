@@ -4,22 +4,23 @@ import React, { useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
 import AccountSidebar from "../../components/AccountSidebar";
+import AccountMobileNav from "../../components/AccountMobileNav";
 import { MyContext } from "../../LegacyProviders";
 import { putData, postData, getData } from "../../utils/api";
 import { imgUrl } from "../../utils/imageUrl";
 import toast from "react-hot-toast";
 import {
   MdPerson, MdEmail, MdPhone, MdLock, MdEdit, MdSave, MdClose,
-  MdShoppingBag, MdFavorite, MdLocationOn, MdCardGiftcard,
-  MdAccountBalanceWallet, MdVisibility, MdVisibilityOff, MdVerified,
+  MdShoppingBag, MdFavorite, MdLocationOn, MdAccountBalanceWallet,
+  MdVisibility, MdVisibilityOff, MdVerified,
 } from "react-icons/md";
-
 const QUICK_LINKS = [
-  { href: "/my-orders",  icon: MdShoppingBag,        label: "My Orders",    color: "bg-blue-50 text-[#1565C0]" },
-  { href: "/my-list",    icon: MdFavorite,            label: "Wishlist",     color: "bg-red-50 text-red-500" },
-  { href: "/my-address", icon: MdLocationOn,          label: "Addresses",    color: "bg-green-50 text-green-600" },
-  { href: "/referral",   icon: MdAccountBalanceWallet, label: "Wallet & Refer", color: "bg-purple-50 text-purple-600" },
+  { href: "/my-orders",  icon: MdShoppingBag,          label: "My Orders",      color: "bg-blue-50 text-[#1565C0]" },
+  { href: "/my-list",    icon: MdFavorite,              label: "Wishlist",       color: "bg-red-50 text-red-500" },
+  { href: "/my-address", icon: MdLocationOn,            label: "Addresses",      color: "bg-green-50 text-green-600" },
+  { href: "/referral",   icon: MdAccountBalanceWallet,  label: "Wallet & Refer", color: "bg-purple-50 text-purple-600" },
 ];
+
 
 function InputField({ label, icon: Icon, value, onChange, name, type = "text", disabled, readOnly, suffix }) {
   return (
@@ -46,23 +47,21 @@ const MyAccount = () => {
   const context = useContext(MyContext);
   const user = context?.userData;
 
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [editing, setEditing]   = useState(false);
+  const [saving,  setSaving]    = useState(false);
   const [formFields, setFormFields] = useState({ name: "", mobile: "" });
 
   const [showPwdForm, setShowPwdForm] = useState(false);
-  const [pwdSaving, setPwdSaving] = useState(false);
-  const [showOld, setShowOld] = useState(false);
-  const [showNew, setShowNew] = useState(false);
+  const [pwdSaving,   setPwdSaving]   = useState(false);
+  const [showOld,     setShowOld]     = useState(false);
+  const [showNew,     setShowNew]     = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [pwdFields, setPwdFields] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
 
   const [stats, setStats] = useState({ orders: 0, wallet: 0 });
 
   useEffect(() => {
-    if (user) {
-      setFormFields({ name: user.name || "", mobile: user.mobile || "" });
-    }
+    if (user) setFormFields({ name: user.name || "", mobile: user.mobile || "" });
   }, [user]);
 
   useEffect(() => {
@@ -81,8 +80,7 @@ const MyAccount = () => {
     ? user.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()
     : "U";
 
-  const avatarSrc = user?.avatar ? imgUrl(user.avatar) : null;
-
+  const avatarSrc   = user?.avatar ? imgUrl(user.avatar) : null;
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString("en-IN", { month: "long", year: "numeric" })
     : null;
@@ -94,7 +92,7 @@ const MyAccount = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!formFields.name.trim()) return toast.error("Name is required");
+    if (!formFields.name.trim())   return toast.error("Name is required");
     if (!formFields.mobile.trim()) return toast.error("Phone number is required");
     setSaving(true);
     const res = await putData(`/api/user/${user?._id || user?.id}`, formFields);
@@ -142,193 +140,223 @@ const MyAccount = () => {
   );
 
   return (
-    <section className="w-full py-10 bg-[#F5F7FF] min-h-screen">
-      <div className="container flex flex-col md:flex-row gap-6">
+    <section className="w-full py-8 bg-[#F5F7FF] min-h-screen">
+      <div className="container">
 
-        {/* Sidebar */}
-        <div className="hidden md:block md:w-[22%]">
-          <AccountSidebar />
-        </div>
+        {/* Mobile navigation tabs */}
+        <AccountMobileNav />
 
-        {/* Main */}
-        <div className="w-full md:w-[78%] flex flex-col gap-5">
+        <div className="flex flex-col md:flex-row gap-6">
 
-          {/* ── Profile Header Card ── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            {/* Blue banner */}
-            <div className="h-24 bg-gradient-to-r from-[#1A237E] to-[#1565C0]" />
-            <div className="px-6 pb-6 relative">
-              {/* Avatar */}
-              <div className="absolute -top-10 left-6 w-20 h-20 rounded-2xl border-4 border-white shadow-md overflow-hidden bg-[#1565C0] flex items-center justify-center">
-                {avatarSrc ? (
-                  <NextImage src={avatarSrc} alt="avatar" fill className="object-cover" sizes="80px" />
-                ) : (
-                  <span className="text-white text-[22px] font-[800]">{initials}</span>
-                )}
-              </div>
+          {/* ── Sidebar (desktop only) ── */}
+          <div className="hidden md:block w-64 flex-shrink-0">
+            <AccountSidebar />
+          </div>
 
-              {/* Name / email row */}
-              <div className="pt-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-[20px] font-[800] text-gray-900 leading-tight">{user?.name || "—"}</h2>
-                    {user?.isVerified && <MdVerified className="text-[#1565C0] text-[18px]" title="Verified" />}
+          {/* ── Main content ── */}
+          <div className="flex-1 min-w-0 flex flex-col gap-5">
+
+            {/* Profile Header Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="h-20 bg-gradient-to-r from-[#1A237E] to-[#1565C0]" />
+              <div className="px-5 sm:px-6 pb-5 relative">
+                {/* Avatar */}
+                <div className="absolute -top-9 left-5 sm:left-6 w-[72px] h-[72px] rounded-2xl border-4 border-white shadow-md overflow-hidden bg-[#1565C0] flex items-center justify-center">
+                  {avatarSrc ? (
+                    <NextImage src={avatarSrc} alt="avatar" fill className="object-cover" sizes="72px" />
+                  ) : (
+                    <span className="text-white text-[20px] font-[800]">{initials}</span>
+                  )}
+                </div>
+
+                {/* Name / actions */}
+                <div className="pt-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-[18px] sm:text-[20px] font-[800] text-gray-900 leading-tight">
+                        {user?.name || "—"}
+                      </h2>
+                      {user?.isVerified && (
+                        <MdVerified className="text-[#1565C0] text-[17px]" title="Verified" />
+                      )}
+                    </div>
+                    <p className="text-[13px] text-gray-500 mt-0.5">{user?.email}</p>
+                    {memberSince && (
+                      <p className="text-[11px] text-gray-400 mt-0.5">Member since {memberSince}</p>
+                    )}
                   </div>
-                  <p className="text-[13px] text-gray-500 mt-0.5">{user?.email}</p>
-                  {memberSince && <p className="text-[11px] text-gray-400 mt-0.5">Member since {memberSince}</p>}
+                  <button
+                    onClick={() => { setEditing(true); setShowPwdForm(false); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors self-start sm:self-auto whitespace-nowrap"
+                  >
+                    <MdEdit className="text-[15px]" /> Edit Profile
+                  </button>
                 </div>
-                <button
-                  onClick={() => { setEditing(true); setShowPwdForm(false); }}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors self-start sm:self-auto"
-                >
-                  <MdEdit className="text-[16px]" /> Edit Profile
-                </button>
-              </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5">
-                <div className="bg-[#F0F5FF] rounded-xl px-4 py-3 text-center">
-                  <p className="text-[22px] font-[900] text-[#1565C0]">{stats.orders}</p>
-                  <p className="text-[11px] font-[600] text-gray-500 uppercase tracking-wide">Orders</p>
-                </div>
-                <div className="bg-[#F0FFF4] rounded-xl px-4 py-3 text-center">
-                  <p className="text-[22px] font-[900] text-green-600">₹{Number(stats.wallet).toLocaleString("en-IN")}</p>
-                  <p className="text-[11px] font-[600] text-gray-500 uppercase tracking-wide">Wallet Balance</p>
-                </div>
-                <div className="bg-[#FFF8F0] rounded-xl px-4 py-3 text-center col-span-2 sm:col-span-1">
-                  <p className="text-[22px] font-[900] text-orange-500">{user?.role === "admin" ? "Admin" : "Member"}</p>
-                  <p className="text-[11px] font-[600] text-gray-500 uppercase tracking-wide">Account Type</p>
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3 mt-4">
+                  <div className="bg-[#F0F5FF] rounded-xl px-3 py-3 text-center">
+                    <p className="text-[20px] sm:text-[22px] font-[900] text-[#1565C0]">{stats.orders}</p>
+                    <p className="text-[10px] sm:text-[11px] font-[600] text-gray-500 uppercase tracking-wide">Orders</p>
+                  </div>
+                  <div className="bg-[#F0FFF4] rounded-xl px-3 py-3 text-center">
+                    <p className="text-[16px] sm:text-[20px] font-[900] text-green-600 leading-tight">
+                      ₹{Number(stats.wallet).toLocaleString("en-IN")}
+                    </p>
+                    <p className="text-[10px] sm:text-[11px] font-[600] text-gray-500 uppercase tracking-wide">Wallet</p>
+                  </div>
+                  <div className="bg-[#FFF8F0] rounded-xl px-3 py-3 text-center">
+                    <p className="text-[15px] sm:text-[18px] font-[900] text-orange-500 leading-tight">
+                      {user?.role === "admin" ? "Admin" : "Member"}
+                    </p>
+                    <p className="text-[10px] sm:text-[11px] font-[600] text-gray-500 uppercase tracking-wide">Role</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* ── Edit Profile Form ── */}
-          {editing && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-[15px] font-[800] text-gray-800 mb-5 flex items-center gap-2">
-                <MdPerson className="text-[#1565C0] text-[20px]" /> Edit Profile
-              </h3>
-              <form onSubmit={handleSave} className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <InputField label="Full Name" icon={MdPerson} name="name" value={formFields.name} onChange={onChangeInput} disabled={saving} />
-                  <InputField label="Email" icon={MdEmail} name="email" value={user?.email} readOnly />
+            {/* Edit Profile Form */}
+            {editing && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
+                <h3 className="text-[15px] font-[800] text-gray-800 mb-5 flex items-center gap-2">
+                  <MdPerson className="text-[#1565C0] text-[20px]" /> Edit Profile
+                </h3>
+                <form onSubmit={handleSave} className="flex flex-col gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <InputField
+                      label="Full Name" icon={MdPerson} name="name"
+                      value={formFields.name} onChange={onChangeInput} disabled={saving}
+                    />
+                    <InputField
+                      label="Email" icon={MdEmail} name="email"
+                      value={user?.email} readOnly
+                    />
+                  </div>
+                  <InputField
+                    label="Phone Number" icon={MdPhone} name="mobile"
+                    value={formFields.mobile} onChange={onChangeInput} disabled={saving}
+                  />
+                  <div className="flex gap-3 pt-1">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-60"
+                    >
+                      <MdSave className="text-[16px]" /> {saving ? "Saving…" : "Save Changes"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 text-gray-600 text-[13px] font-[700] rounded-xl hover:bg-gray-50 transition-colors"
+                    >
+                      <MdClose className="text-[16px]" /> Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Personal Info (read-only) */}
+            {!editing && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
+                <h3 className="text-[15px] font-[800] text-gray-800 mb-4 flex items-center gap-2">
+                  <MdPerson className="text-[#1565C0] text-[20px]" /> Personal Information
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { icon: MdPerson, label: "Full Name",     value: user?.name },
+                    { icon: MdEmail,  label: "Email Address", value: user?.email },
+                    { icon: MdPhone,  label: "Phone Number",  value: user?.mobile || "Not added" },
+                  ].map(({ icon: Icon, label, value }) => (
+                    <div key={label} className="flex items-start gap-3 p-4 bg-[#F8FAFF] rounded-xl">
+                      <div className="w-9 h-9 rounded-lg bg-[#EEF4FF] flex items-center justify-center flex-shrink-0">
+                        <Icon className="text-[#1565C0] text-[17px]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-[700] uppercase tracking-wider text-gray-400">{label}</p>
+                        <p className="text-[13px] font-[600] text-gray-700 mt-0.5 truncate">{value || "—"}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <InputField label="Phone Number" icon={MdPhone} name="mobile" value={formFields.mobile} onChange={onChangeInput} disabled={saving} />
-                <div className="flex gap-3 pt-1">
+              </div>
+            )}
+
+            {/* Security / Change Password */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-[15px] font-[800] text-gray-800 flex items-center gap-2">
+                  <MdLock className="text-[#1565C0] text-[20px]" /> Security
+                </h3>
+                <button
+                  onClick={() => setShowPwdForm((v) => !v)}
+                  className="text-[13px] font-[700] text-[#1565C0] hover:underline"
+                >
+                  {showPwdForm ? "Cancel" : "Change Password"}
+                </button>
+              </div>
+              <p className="text-[12px] text-gray-400 mb-4">Your password is encrypted and stored securely.</p>
+
+              {showPwdForm && (
+                <form onSubmit={handlePasswordChange} className="flex flex-col gap-4 pt-3 border-t border-gray-100">
+                  {[
+                    { label: "Current Password",  name: "oldPassword",     show: showOld,     toggle: () => setShowOld((v) => !v) },
+                    { label: "New Password",       name: "newPassword",     show: showNew,     toggle: () => setShowNew((v) => !v) },
+                    { label: "Confirm Password",   name: "confirmPassword", show: showConfirm, toggle: () => setShowConfirm((v) => !v) },
+                  ].map(({ label, name, show, toggle }) => (
+                    <div key={name} className="flex flex-col gap-1">
+                      <label className="text-[11px] font-[700] uppercase tracking-wider text-gray-400">{label}</label>
+                      <div className="relative flex items-center">
+                        <MdLock className="absolute left-3 text-gray-400 text-[18px]" />
+                        <input
+                          type={show ? "text" : "password"}
+                          name={name}
+                          value={pwdFields[name]}
+                          onChange={onChangePwd}
+                          disabled={pwdSaving}
+                          className="w-full pl-10 pr-10 py-3 text-[14px] text-gray-700 bg-[#F8FAFF] border border-gray-200 rounded-xl outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/10 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={toggle}
+                          className="absolute right-3 text-gray-400 hover:text-gray-600"
+                        >
+                          {show ? <MdVisibilityOff className="text-[18px]" /> : <MdVisibility className="text-[18px]" />}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                   <button
                     type="submit"
-                    disabled={saving}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-60"
+                    disabled={pwdSaving}
+                    className="self-start flex items-center gap-2 px-5 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-60"
                   >
-                    <MdSave className="text-[16px]" /> {saving ? "Saving…" : "Save Changes"}
+                    <MdSave className="text-[16px]" /> {pwdSaving ? "Saving…" : "Update Password"}
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="flex items-center gap-2 px-6 py-2.5 border border-gray-200 text-gray-600 text-[13px] font-[700] rounded-xl hover:bg-gray-50 transition-colors"
-                  >
-                    <MdClose className="text-[16px]" /> Cancel
-                  </button>
-                </div>
-              </form>
+                </form>
+              )}
             </div>
-          )}
 
-          {/* ── Personal Info (read-only when not editing) ── */}
-          {!editing && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-[15px] font-[800] text-gray-800 mb-5 flex items-center gap-2">
-                <MdPerson className="text-[#1565C0] text-[20px]" /> Personal Information
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {[
-                  { icon: MdPerson,  label: "Full Name",     value: user?.name  },
-                  { icon: MdEmail,   label: "Email Address", value: user?.email },
-                  { icon: MdPhone,   label: "Phone Number",  value: user?.mobile || "Not added" },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex items-start gap-3 p-4 bg-[#F8FAFF] rounded-xl">
-                    <div className="w-9 h-9 rounded-lg bg-[#EEF4FF] flex items-center justify-center flex-shrink-0">
-                      <Icon className="text-[#1565C0] text-[18px]" />
+            {/* Quick Links */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
+              <h3 className="text-[15px] font-[800] text-gray-800 mb-4">Quick Links</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {QUICK_LINKS.map(({ href, icon: Icon, label, color }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-gray-100 hover:border-[#1565C0]/30 hover:shadow-sm transition-all group"
+                  >
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color} group-hover:scale-110 transition-transform`}>
+                      <Icon className="text-[22px]" />
                     </div>
-                    <div>
-                      <p className="text-[10px] font-[700] uppercase tracking-wider text-gray-400">{label}</p>
-                      <p className="text-[14px] font-[600] text-gray-700 mt-0.5">{value || "—"}</p>
-                    </div>
-                  </div>
+                    <span className="text-[12px] font-[600] text-gray-600 text-center">{label}</span>
+                  </Link>
                 ))}
               </div>
             </div>
-          )}
 
-          {/* ── Change Password ── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-[15px] font-[800] text-gray-800 flex items-center gap-2">
-                <MdLock className="text-[#1565C0] text-[20px]" /> Security
-              </h3>
-              <button
-                onClick={() => setShowPwdForm((v) => !v)}
-                className="text-[13px] font-[700] text-[#1565C0] hover:underline"
-              >
-                {showPwdForm ? "Cancel" : "Change Password"}
-              </button>
-            </div>
-            <p className="text-[12px] text-gray-400 mb-4">Your password is encrypted and stored securely.</p>
-
-            {showPwdForm && (
-              <form onSubmit={handlePasswordChange} className="flex flex-col gap-4 pt-2 border-t border-gray-100">
-                {[
-                  { label: "Current Password", name: "oldPassword", show: showOld, toggle: () => setShowOld(v => !v) },
-                  { label: "New Password",     name: "newPassword", show: showNew, toggle: () => setShowNew(v => !v) },
-                  { label: "Confirm Password", name: "confirmPassword", show: showConfirm, toggle: () => setShowConfirm(v => !v) },
-                ].map(({ label, name, show, toggle }) => (
-                  <div key={name} className="flex flex-col gap-1">
-                    <label className="text-[11px] font-[700] uppercase tracking-wider text-gray-400">{label}</label>
-                    <div className="relative flex items-center">
-                      <MdLock className="absolute left-3 text-gray-400 text-[18px]" />
-                      <input
-                        type={show ? "text" : "password"}
-                        name={name}
-                        value={pwdFields[name]}
-                        onChange={onChangePwd}
-                        disabled={pwdSaving}
-                        className="w-full pl-10 pr-10 py-3 text-[14px] text-gray-700 bg-[#F8FAFF] border border-gray-200 rounded-xl outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/10 transition-all"
-                      />
-                      <EyeBtn show={show} toggle={toggle} />
-                    </div>
-                  </div>
-                ))}
-                <button
-                  type="submit"
-                  disabled={pwdSaving}
-                  className="self-start flex items-center gap-2 px-6 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-60 mt-1"
-                >
-                  <MdSave className="text-[16px]" /> {pwdSaving ? "Saving…" : "Update Password"}
-                </button>
-              </form>
-            )}
           </div>
-
-          {/* ── Quick Links ── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-[15px] font-[800] text-gray-800 mb-4">Quick Links</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {QUICK_LINKS.map(({ href, icon: Icon, label, color }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-gray-100 hover:border-[#1565C0]/30 hover:shadow-sm transition-all group"
-                >
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color} group-hover:scale-110 transition-transform`}>
-                    <Icon className="text-[22px]" />
-                  </div>
-                  <span className="text-[12px] font-[600] text-gray-600 text-center">{label}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-
         </div>
       </div>
     </section>

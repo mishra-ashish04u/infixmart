@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import AccountSidebar from '../../components/AccountSidebar';
+import AccountMobileNav from '../../components/AccountMobileNav';
 import { LuClipboardCheck } from 'react-icons/lu';
 import EmptyState from '../../components/EmptyState';
 import { FaAngleDown, FaAngleUp, FaUndo, FaCheck } from 'react-icons/fa';
@@ -167,13 +168,15 @@ const Orders = () => {
 
   return (
   <>
-    <section className="w-full py-10">
-      <div className="container flex flex-col md:flex-row gap-5">
-        <div className="col1 hidden md:block md:w-[20%]">
+    <section className="w-full py-8 bg-[#F5F7FF] min-h-screen">
+      <div className="container">
+        <AccountMobileNav />
+        <div className="flex flex-col md:flex-row gap-6">
+        <div className="hidden md:block w-64 flex-shrink-0">
           <AccountSidebar />
         </div>
 
-        <div className="col2 w-full md:w-[80%]">
+        <div className="flex-1 min-w-0">
           <div className="bg-white rounded-lg shadow-sm border border-[rgba(0,0,0,0.08)]">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <div>
@@ -377,6 +380,7 @@ const Orders = () => {
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
     </section>

@@ -2,442 +2,419 @@
 
 import React, { useContext, useEffect, useState } from "react";
 import AccountSidebar from "../../components/AccountSidebar";
-import { Button, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, IconButton } from "@mui/material";
+import AccountMobileNav from "../../components/AccountMobileNav";
 import { MyContext } from "../../LegacyProviders";
 import { postData, putData, getData, deleteData } from "../../utils/api";
-import { Collapse } from "react-collapse";
-import { FiEye, FiEdit, FiTrash2 } from "react-icons/fi";
-import { IoCloseSharp } from "react-icons/io5";
+import {
+  MdAdd, MdClose, MdEdit, MdDelete, MdLocationOn, MdPhone,
+  MdHome, MdCheckCircle, MdSave,
+} from "react-icons/md";
+
+const BLANK = {
+  name: "", mobile: "", pincode: "", flatHouse: "", areaStreet: "",
+  landmark: "", townCity: "", state: "", country: "India", isDefault: false,
+};
+
+const INDIAN_STATES = [
+  "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh",
+  "Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka",
+  "Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram",
+  "Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana",
+  "Tripura","Uttar Pradesh","Uttarakhand","West Bengal",
+  "Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry",
+];
+
+function Spinner() {
+  return <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />;
+}
+
+function Field({ label, required, children }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-[11px] font-[700] uppercase tracking-wider text-gray-400">
+        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+const inputCls = "w-full px-4 py-2.5 text-[14px] text-gray-700 bg-[#F8FAFF] border border-gray-200 rounded-xl outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/10 transition-all";
+
+function ConfirmModal({ open, title, message, onConfirm, onCancel, loading }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-[16px] font-[800] text-gray-800 mb-2">{title}</h3>
+        <p className="text-[13px] text-gray-500 mb-6">{message}</p>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2.5 border border-gray-200 text-[13px] font-[600] text-gray-600 rounded-xl hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex-1 py-2.5 bg-red-500 text-white text-[13px] font-[600] rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {loading ? <Spinner /> : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ViewModal({ addr, onClose }) {
+  if (!addr) return null;
+  const rows = [
+    ["Name",        addr.name],
+    ["Mobile",      addr.mobile],
+    ["Flat/House",  addr.flatHouse],
+    ["Street/Area", addr.areaStreet],
+    ["Landmark",    addr.landmark || "N/A"],
+    ["City",        addr.townCity],
+    ["State",       addr.state],
+    ["Pincode",     addr.pincode],
+    ["Country",     addr.country],
+  ];
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-[16px] font-[800] text-gray-800">Address Details</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
+            <MdClose className="text-[18px]" />
+          </button>
+        </div>
+        {addr.isDefault && (
+          <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-[11px] font-[700] px-2.5 py-1 rounded-full mb-3">
+            <MdCheckCircle className="text-[13px]" /> Default Address
+          </span>
+        )}
+        <div className="flex flex-col gap-2.5">
+          {rows.map(([label, value]) => (
+            <div key={label} className="flex gap-3">
+              <span className="text-[12px] font-[700] text-gray-400 w-24 flex-shrink-0 pt-0.5">{label}</span>
+              <span className="text-[13px] text-gray-700 flex-1">{value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const MyAddress = () => {
-    const [isLoading3, setIsLoading3] = useState(false);
-    const [isAddAddressFormShow, setIsAddAddressFormShow] = useState(false);
-    const [addressList, setAddressList] = useState([]);
+  const [addressList,   setAddressList]   = useState([]);
+  const [saving,        setSaving]        = useState(false);
+  const [formOpen,      setFormOpen]      = useState(false);
+  const [editId,        setEditId]        = useState(null);
+  const [fields,        setFields]        = useState(BLANK);
 
-    // Address Action States
-    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-    const [viewData, setViewData] = useState(null);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [deleteId, setDeleteId] = useState(null);
-    const [editId, setEditId] = useState(null);
+  const [viewAddr,      setViewAddr]      = useState(null);
+  const [deleteId,      setDeleteId]      = useState(null);
+  const [deleting,      setDeleting]      = useState(false);
 
-    const [addressFields, setAddressFields] = useState({
-        name: "",
-        mobile: "",
-        pincode: "",
-        flatHouse: "",
-        areaStreet: "",
-        landmark: "",
-        townCity: "",
-        state: "",
-        country: "India",
-        isDefault: false,
+  const context = useContext(MyContext);
+
+  useEffect(() => {
+    if (context?.isLogin) fetchAddresses();
+  }, [context?.isLogin]);
+
+  const fetchAddresses = () => {
+    getData("/api/user/addresses").then((res) => {
+      if (res?.error === false) setAddressList(res.data);
     });
+  };
 
-    const context = useContext(MyContext);
+  const onChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFields((p) => ({ ...p, [name]: type === "checkbox" ? checked : value }));
+  };
 
-    useEffect(() => {
-        if (context?.isLogin) {
-            fetchAddresses();
-        }
-    }, [context?.isLogin]);
+  const openAdd = () => {
+    setEditId(null);
+    setFields(BLANK);
+    setFormOpen(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
-    const fetchAddresses = () => {
-        getData(`/api/user/addresses`).then((res) => {
-            if (res?.error === false) {
-                setAddressList(res.data);
-            }
-        });
-    };
+  const openEdit = (addr) => {
+    setEditId(addr.id);
+    setFields({
+      name: addr.name, mobile: addr.mobile, pincode: addr.pincode,
+      flatHouse: addr.flatHouse, areaStreet: addr.areaStreet,
+      landmark: addr.landmark || "", townCity: addr.townCity,
+      state: addr.state, country: addr.country, isDefault: addr.isDefault || false,
+    });
+    setFormOpen(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
-    const onChangeAddressInput = (e) => {
-        const { name, value } = e.target;
-        setAddressFields({
-            ...addressFields,
-            [name]: value,
-        });
-    };
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditId(null);
+    setFields(BLANK);
+  };
 
-    const handleEditBtnClick = (addr) => {
-        setEditId(addr.id);
-        setAddressFields({
-            name: addr.name,
-            mobile: addr.mobile,
-            pincode: addr.pincode,
-            flatHouse: addr.flatHouse,
-            areaStreet: addr.areaStreet,
-            landmark: addr.landmark,
-            townCity: addr.townCity,
-            state: addr.state,
-            country: addr.country,
-            isDefault: addr.isDefault || false,
-        });
-        setIsAddAddressFormShow(true);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const required = ["name","mobile","pincode","flatHouse","areaStreet","townCity","state","country"];
+    for (const f of required) {
+      if (!fields[f]) {
+        context.openAlertBox("error", `Please fill in: ${f}`);
+        return;
+      }
+    }
+    setSaving(true);
+    const fn = editId
+      ? putData(`/api/user/addresses/${editId}`, fields)
+      : postData("/api/user/addresses", fields);
+    const res = await fn;
+    setSaving(false);
+    if (res?.error !== true) {
+      context.openAlertBox("success", editId ? "Address updated!" : "Address added!");
+      closeForm();
+      fetchAddresses();
+    } else {
+      context.openAlertBox("error", res?.message || "Failed to save address");
+    }
+  };
 
-    const handleDeleteBtnClick = (id) => {
-        setDeleteId(id);
-        setIsDeleteModalOpen(true);
-    };
+  const confirmDelete = async () => {
+    setDeleting(true);
+    const res = await deleteData(`/api/user/addresses/${deleteId}`);
+    setDeleting(false);
+    if (res?.error === false) {
+      context.openAlertBox("success", "Address deleted");
+      setDeleteId(null);
+      fetchAddresses();
+    } else {
+      context.openAlertBox("error", res?.message || "Failed to delete");
+    }
+  };
 
-    const handleViewBtnClick = (addr) => {
-        setViewData(addr);
-        setIsViewModalOpen(true);
-    };
+  return (
+    <section className="w-full py-8 bg-[#F5F7FF] min-h-screen">
+      <div className="container">
+        <AccountMobileNav />
+        <div className="flex flex-col md:flex-row gap-6">
 
-    const confirmDeleteAddress = () => {
-        setIsLoading3(true);
-        deleteData(`/api/user/addresses/${deleteId}`).then((res) => {
-            setIsLoading3(false);
-            if (res?.error === false) {
-                context.openAlertBox("success", "Address deleted successfully");
-                setIsDeleteModalOpen(false);
-                setDeleteId(null);
-                fetchAddresses();
-            } else {
-                context.openAlertBox("error", res?.message || "Failed to delete address");
-            }
-        });
-    };
+          {/* Sidebar */}
+          <div className="hidden md:block w-64 flex-shrink-0">
+            <AccountSidebar />
+          </div>
 
-    const handleAddAddress = (e) => {
-        e.preventDefault();
-        setIsLoading3(true);
+          {/* Main */}
+          <div className="flex-1 min-w-0 flex flex-col gap-5">
 
-        const requiredFields = ["name", "mobile", "pincode", "flatHouse", "areaStreet", "townCity", "state", "country"];
-        for (let field of requiredFields) {
-            if (addressFields[field] === "") {
-                context.openAlertBox("error", `Please fill all required fields: ${field} is missing`);
-                setIsLoading3(false);
-                return;
-            }
-        }
-
-        const payload = {
-            ...addressFields,
-        };
-
-        if (editId) {
-            putData(`/api/user/addresses/${editId}`, payload).then(
-                (res) => {
-                    setIsLoading3(false);
-                    if (res?.error !== true) {
-                        context.openAlertBox("success", "Address updated successfully");
-                        setEditId(null);
-                        setAddressFields({
-                            name: "",
-                            mobile: "",
-                            pincode: "",
-                            flatHouse: "",
-                            areaStreet: "",
-                            landmark: "",
-                            townCity: "",
-                            state: "",
-                            country: "India",
-                            isDefault: false,
-                        });
-                        setIsAddAddressFormShow(false);
-                        fetchAddresses();
-                    } else {
-                        context.openAlertBox("error", res?.message || "Failed to update address");
-                    }
-                }
-            );
-        } else {
-            postData(`/api/user/addresses`, payload).then(
-                (res) => {
-                    setIsLoading3(false);
-                    if (res?.error !== true) {
-                        context.openAlertBox("success", "Address added successfully");
-                        setAddressFields({
-                            name: "",
-                            mobile: "",
-                            pincode: "",
-                            flatHouse: "",
-                            areaStreet: "",
-                            landmark: "",
-                            townCity: "",
-                            state: "",
-                            country: "India",
-                            isDefault: false,
-                        });
-                        setIsAddAddressFormShow(false);
-                        fetchAddresses();
-                    } else {
-                        context.openAlertBox("error", res?.message || "Failed to add address");
-                    }
-                }
-            );
-        }
-    };
-
-    return (
-        <section className="w-full py-10">
-            <div className="container flex flex-col md:flex-row gap-5">
-                <div className="col1 hidden md:block md:w-[20%]">
-                    <AccountSidebar />
+            {/* Header */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-[17px] font-[800] text-gray-800">My Addresses</h2>
+                  <p className="text-[12px] text-gray-400 mt-0.5">
+                    {addressList.length} address{addressList.length !== 1 ? "es" : ""} saved
+                  </p>
                 </div>
-
-                <div className="col2 w-full md:w-[80%]">
-                    <div className="p-5 bg-white rounded-md shadow-md card mb-5">
-                        <div className="flex items-center justify-between pb-3">
-                            <h2 className="pb-0 text-[20px] font-[600]">My Addresses</h2>
-                            <Button
-                                className="btn-blue btn-sm"
-                                onClick={() => {
-                                    if (isAddAddressFormShow && editId) {
-                                        setEditId(null);
-                                        setAddressFields({
-                                            name: "", mobile: "", pincode: "", flatHouse: "", areaStreet: "", landmark: "", townCity: "", state: "", country: "India",
-                                        });
-                                    }
-                                    setIsAddAddressFormShow(!isAddAddressFormShow);
-                                }}
-                            >
-                                {isAddAddressFormShow ? "Close Address Form" : "Add Address"}
-                            </Button>
-                        </div>
-                        <hr />
-                        <br />
-
-                        <Collapse isOpened={isAddAddressFormShow}>
-                            <div className="card bg-gray-50 border border-gray-200 rounded-md p-6 mb-8" id="address-form">
-                                <h3 className="text-[18px] font-[600] mb-4">
-                                    {editId ? "Edit Address" : "Add Address"}
-                                </h3>
-
-                                <form className="form" onSubmit={handleAddAddress}>
-                                    <div className="grid grid-cols-1 gap-5 mb-5">
-                                        <div className="col">
-                                            <h3 className="text-[14px] font-[500] mb-1">Country/Region</h3>
-                                            <select
-                                                name="country"
-                                                value={addressFields.country}
-                                                onChange={onChangeAddressInput}
-                                                className="w-full h-[40px] border border-[rgba(0,0,0,0.2)] focus:outline-none focus:border-[rgba(0,0,0,0.4)] rounded-sm px-3 text-sm bg-[#fafafa]"
-                                            >
-                                                <option value="India">India</option>
-                                                <option value="USA">USA</option>
-                                                <option value="UK">UK</option>
-                                                <option value="Canada">Canada</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 gap-5 mb-5">
-                                        <div className="col">
-                                            <h3 className="text-[14px] font-[500] mb-1">Full name (First and Last name)</h3>
-                                            <input
-                                                type="text"
-                                                name="name"
-                                                value={addressFields.name}
-                                                onChange={onChangeAddressInput}
-                                                className="w-full h-[40px] border border-[rgba(0,0,0,0.2)] focus:outline-none focus:border-[rgba(0,0,0,0.4)] rounded-sm p-3 text-sm bg-[#fafafa]"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 gap-5 mb-5">
-                                        <div className="col">
-                                            <h3 className="text-[14px] font-[500] mb-1">Mobile number</h3>
-                                            <input
-                                                type="text"
-                                                name="mobile"
-                                                value={addressFields.mobile}
-                                                onChange={onChangeAddressInput}
-                                                className="w-full h-[40px] border border-[rgba(0,0,0,0.2)] focus:outline-none focus:border-[rgba(0,0,0,0.4)] rounded-sm p-3 text-sm bg-[#fafafa]"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 gap-5 mb-5">
-                                        <div className="col">
-                                            <h3 className="text-[14px] font-[500] mb-1">Pincode</h3>
-                                            <input
-                                                type="text"
-                                                name="pincode"
-                                                value={addressFields.pincode}
-                                                onChange={onChangeAddressInput}
-                                                className="w-full h-[40px] border border-[rgba(0,0,0,0.2)] focus:outline-none focus:border-[rgba(0,0,0,0.4)] rounded-sm p-3 text-sm bg-[#fafafa]"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 gap-5 mb-5">
-                                        <div className="col">
-                                            <h3 className="text-[14px] font-[500] mb-1">Flat, House no., Building, Company, Apartment</h3>
-                                            <input
-                                                type="text"
-                                                name="flatHouse"
-                                                value={addressFields.flatHouse}
-                                                onChange={onChangeAddressInput}
-                                                className="w-full h-[40px] border border-[rgba(0,0,0,0.2)] focus:outline-none focus:border-[rgba(0,0,0,0.4)] rounded-sm p-3 text-sm bg-[#fafafa]"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 gap-5 mb-5">
-                                        <div className="col">
-                                            <h3 className="text-[14px] font-[500] mb-1">Area, Street, Sector, Village</h3>
-                                            <input
-                                                type="text"
-                                                name="areaStreet"
-                                                value={addressFields.areaStreet}
-                                                onChange={onChangeAddressInput}
-                                                className="w-full h-[40px] border border-[rgba(0,0,0,0.2)] focus:outline-none focus:border-[rgba(0,0,0,0.4)] rounded-sm p-3 text-sm bg-[#fafafa]"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 gap-5 mb-5">
-                                        <div className="col">
-                                            <h3 className="text-[14px] font-[500] mb-1">Landmark</h3>
-                                            <input
-                                                type="text"
-                                                name="landmark"
-                                                value={addressFields.landmark}
-                                                onChange={onChangeAddressInput}
-                                                className="w-full h-[40px] border border-[rgba(0,0,0,0.2)] focus:outline-none focus:border-[rgba(0,0,0,0.4)] rounded-sm p-3 text-sm bg-[#fafafa]"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-5 mb-8">
-                                        <div className="col">
-                                            <h3 className="text-[14px] font-[500] mb-1">Town/City</h3>
-                                            <input
-                                                type="text"
-                                                name="townCity"
-                                                value={addressFields.townCity}
-                                                onChange={onChangeAddressInput}
-                                                className="w-full h-[40px] border border-[rgba(0,0,0,0.2)] focus:outline-none focus:border-[rgba(0,0,0,0.4)] rounded-sm p-3 text-sm bg-[#fafafa]"
-                                            />
-                                        </div>
-                                        <div className="col">
-                                            <h3 className="text-[14px] font-[500] mb-1">State</h3>
-                                            <select
-                                                name="state"
-                                                value={addressFields.state}
-                                                onChange={onChangeAddressInput}
-                                                className="w-full h-[40px] border border-[rgba(0,0,0,0.2)] focus:outline-none focus:border-[rgba(0,0,0,0.4)] rounded-sm px-3 text-sm bg-[#fafafa]"
-                                            >
-                                                <option value="">Choose a state</option>
-                                                <option value="Andhra Pradesh">Andhra Pradesh</option>
-                                                <option value="Maharashtra">Maharashtra</option>
-                                                <option value="Karnataka">Karnataka</option>
-                                                <option value="Tamil Nadu">Tamil Nadu</option>
-                                                {/* Add more states... */}
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 gap-5 mb-8">
-                                        <div className="col flex items-center gap-2">
-                                            <input
-                                                type="checkbox"
-                                                name="isDefault"
-                                                id="isDefault"
-                                                checked={addressFields.isDefault}
-                                                onChange={(e) => setAddressFields({ ...addressFields, isDefault: e.target.checked })}
-                                                className="w-[18px] h-[18px] cursor-pointer"
-                                            />
-                                            <label htmlFor="isDefault" className="text-[15px] font-[500] cursor-pointer text-gray-800 tracking-wide">Make this my default address</label>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-end gap-4 w-full">
-                                        <Button
-                                            type="submit"
-                                            className="btn-blue btn-lg !w-[150px]"
-                                            disabled={isLoading3}
-                                        >
-                                            {isLoading3 ? <CircularProgress size={24} color="inherit" /> : "Save"}
-                                        </Button>
-                                    </div>
-                                </form>
-                            </div>
-                        </Collapse>
-
-                        {addressList?.length > 0 ? (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                                {addressList.map((addr, index) => (
-                                    <div key={index} className="border border-gray-200 rounded-md p-5 shadow-sm bg-gray-50 flex flex-col justify-between">
-                                        <div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <h3 className="text-[16px] font-[600]">{addr.name}</h3>
-                                                    {addr.isDefault && (
-                                                        <span className="bg-blue-100 text-blue-800 text-[11px] font-[600] px-2 py-[2px] rounded uppercase tracking-wider">Default</span>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <IconButton size="small" sx={{ color: '#4b5563', '&:hover': { color: '#2563eb', bgcolor: '#eff6ff' } }} onClick={() => handleViewBtnClick(addr)}><FiEye className="text-[18px]" /></IconButton>
-                                                    <IconButton size="small" sx={{ color: '#4b5563', '&:hover': { color: '#059669', bgcolor: '#ecfdf5' } }} onClick={() => handleEditBtnClick(addr)}><FiEdit className="text-[18px]" /></IconButton>
-                                                    <IconButton size="small" sx={{ color: '#4b5563', '&:hover': { color: '#dc2626', bgcolor: '#fef2f2' } }} onClick={() => handleDeleteBtnClick(addr.id)}><FiTrash2 className="text-[18px]" /></IconButton>
-                                                </div>
-                                            </div>
-                                            <p className="text-[14px] text-gray-700 mb-1">
-                                                <span className="font-[500] text-gray-900">Mobile:</span> {addr.mobile}
-                                            </p>
-                                            <p className="text-[14px] text-gray-700 leading-relaxed max-w-[90%]">
-                                                {addr.flatHouse}, {addr.areaStreet}<br />
-                                                {addr.landmark ? `${addr.landmark}, ` : ""}
-                                                {addr.townCity}, {addr.state} - {addr.pincode}<br />
-                                                {addr.country}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-gray-500 text-center py-5">No addresses saved yet.</p>
-                        )}
-                    </div>
-                </div>
+                <button
+                  onClick={formOpen ? closeForm : openAdd}
+                  className={`flex items-center gap-2 px-4 py-2 text-[13px] font-[700] rounded-xl transition-colors ${
+                    formOpen
+                      ? "border border-gray-200 text-gray-600 hover:bg-gray-50"
+                      : "bg-[#1565C0] text-white hover:bg-[#1251A3]"
+                  }`}
+                >
+                  {formOpen ? <><MdClose className="text-[16px]" /> Cancel</> : <><MdAdd className="text-[16px]" /> Add Address</>}
+                </button>
+              </div>
             </div>
 
-            {/* View Modal */}
-            <Dialog open={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle className="flex items-center justify-between">
-                    <span className="font-[600]">View Address</span>
-                    <IconButton onClick={() => setIsViewModalOpen(false)}><IoCloseSharp /></IconButton>
-                </DialogTitle>
-                <DialogContent dividers>
-                    {viewData && (
-                        <div className="flex flex-col gap-3">
-                            {viewData.isDefault && (
-                                <div className="mb-1"><span className="bg-blue-100 text-blue-800 text-[12px] font-[600] px-2 py-1 rounded uppercase tracking-wider">Default Address</span></div>
-                            )}
-                            <p className="text-[15px]"><b className="font-[600]">Name:</b> {viewData.name}</p>
-                            <p className="text-[15px]"><b className="font-[600]">Mobile:</b> {viewData.mobile}</p>
-                            <p className="text-[15px]"><b className="font-[600]">Flat/House No:</b> {viewData.flatHouse}</p>
-                            <p className="text-[15px]"><b className="font-[600]">Street/Area:</b> {viewData.areaStreet}</p>
-                            <p className="text-[15px]"><b className="font-[600]">Landmark:</b> {viewData.landmark || "N/A"}</p>
-                            <p className="text-[15px]"><b className="font-[600]">Town/City:</b> {viewData.townCity}</p>
-                            <p className="text-[15px]"><b className="font-[600]">State:</b> {viewData.state}</p>
-                            <p className="text-[15px]"><b className="font-[600]">Pincode:</b> {viewData.pincode}</p>
-                            <p className="text-[15px]"><b className="font-[600]">Country:</b> {viewData.country}</p>
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
+            {/* Address Form */}
+            {formOpen && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
+                <h3 className="text-[15px] font-[800] text-gray-800 mb-5 flex items-center gap-2">
+                  <MdLocationOn className="text-[#1565C0] text-[20px]" />
+                  {editId ? "Edit Address" : "New Address"}
+                </h3>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-            {/* Delete Modal */}
-            <Dialog open={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
-                <DialogTitle>Confirm Delete</DialogTitle>
-                <DialogContent>
-                    Are you sure you want to delete this address? This action cannot be undone.
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setIsDeleteModalOpen(false)} color="inherit">Cancel</Button>
-                    <Button onClick={confirmDeleteAddress} color="error" variant="contained" disabled={isLoading3}>
-                        {isLoading3 ? <CircularProgress size={20} color="inherit" /> : "Delete"}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </section>
-    );
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Field label="Full Name" required>
+                      <input name="name" value={fields.name} onChange={onChange} className={inputCls} placeholder="First and last name" />
+                    </Field>
+                    <Field label="Mobile Number" required>
+                      <input name="mobile" value={fields.mobile} onChange={onChange} className={inputCls} placeholder="10-digit mobile" />
+                    </Field>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Field label="Pincode" required>
+                      <input name="pincode" value={fields.pincode} onChange={onChange} className={inputCls} placeholder="6-digit pincode" maxLength={6} />
+                    </Field>
+                    <Field label="Country" required>
+                      <select name="country" value={fields.country} onChange={onChange} className={inputCls}>
+                        <option value="India">India</option>
+                        <option value="USA">USA</option>
+                        <option value="UK">UK</option>
+                        <option value="Canada">Canada</option>
+                      </select>
+                    </Field>
+                  </div>
+
+                  <Field label="Flat / House No. / Building" required>
+                    <input name="flatHouse" value={fields.flatHouse} onChange={onChange} className={inputCls} placeholder="Flat no., building name…" />
+                  </Field>
+
+                  <Field label="Area / Street / Sector" required>
+                    <input name="areaStreet" value={fields.areaStreet} onChange={onChange} className={inputCls} placeholder="Area, street, sector…" />
+                  </Field>
+
+                  <Field label="Landmark">
+                    <input name="landmark" value={fields.landmark} onChange={onChange} className={inputCls} placeholder="Near temple, hospital… (optional)" />
+                  </Field>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Field label="Town / City" required>
+                      <input name="townCity" value={fields.townCity} onChange={onChange} className={inputCls} placeholder="City name" />
+                    </Field>
+                    <Field label="State" required>
+                      <select name="state" value={fields.state} onChange={onChange} className={inputCls}>
+                        <option value="">Select state</option>
+                        {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </Field>
+                  </div>
+
+                  <label className="flex items-center gap-3 cursor-pointer select-none w-fit">
+                    <input
+                      type="checkbox"
+                      name="isDefault"
+                      checked={fields.isDefault}
+                      onChange={onChange}
+                      className="w-4 h-4 accent-[#1565C0] cursor-pointer"
+                    />
+                    <span className="text-[13px] font-[500] text-gray-700">Set as default address</span>
+                  </label>
+
+                  <div className="flex gap-3 pt-1">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors disabled:opacity-60"
+                    >
+                      {saving ? <Spinner /> : <MdSave className="text-[16px]" />}
+                      {saving ? "Saving…" : "Save Address"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={closeForm}
+                      className="flex items-center gap-2 px-6 py-2.5 border border-gray-200 text-gray-600 text-[13px] font-[700] rounded-xl hover:bg-gray-50 transition-colors"
+                    >
+                      <MdClose className="text-[16px]" /> Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Address List */}
+            {addressList.length === 0 && !formOpen ? (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
+                <MdLocationOn className="text-gray-300 text-[48px] mx-auto mb-3" />
+                <p className="text-[15px] font-[600] text-gray-500">No addresses saved yet</p>
+                <p className="text-[13px] text-gray-400 mt-1">Add an address for faster checkout</p>
+                <button
+                  onClick={openAdd}
+                  className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-[#1565C0] text-white text-[13px] font-[700] rounded-xl hover:bg-[#1251A3] transition-colors"
+                >
+                  <MdAdd /> Add Your First Address
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {addressList.map((addr) => (
+                  <div
+                    key={addr.id}
+                    className={`bg-white rounded-2xl border shadow-sm p-5 flex flex-col justify-between gap-3 ${
+                      addr.isDefault ? "border-[#1565C0]/30 bg-[#F0F7FF]" : "border-gray-100"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-[15px] font-[700] text-gray-800">{addr.name}</h3>
+                          {addr.isDefault && (
+                            <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-[10px] font-[700] px-2 py-0.5 rounded-full">
+                              <MdCheckCircle className="text-[11px]" /> Default
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[13px] text-gray-500 mb-1.5">
+                        <MdPhone className="text-[14px] text-gray-400 flex-shrink-0" />
+                        {addr.mobile}
+                      </div>
+                      <div className="flex items-start gap-1.5 text-[13px] text-gray-600 leading-relaxed">
+                        <MdHome className="text-[14px] text-gray-400 flex-shrink-0 mt-0.5" />
+                        <span>
+                          {addr.flatHouse}, {addr.areaStreet}
+                          {addr.landmark ? `, ${addr.landmark}` : ""}
+                          <br />
+                          {addr.townCity}, {addr.state} — {addr.pincode}
+                          <br />
+                          {addr.country}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                      <button
+                        onClick={() => setViewAddr(addr)}
+                        className="flex-1 py-2 text-[12px] font-[600] text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => openEdit(addr)}
+                        className="flex-1 py-2 text-[12px] font-[600] text-[#1565C0] bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors flex items-center justify-center gap-1"
+                      >
+                        <MdEdit className="text-[13px]" /> Edit
+                      </button>
+                      <button
+                        onClick={() => setDeleteId(addr.id)}
+                        className="flex-1 py-2 text-[12px] font-[600] text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors flex items-center justify-center gap-1"
+                      >
+                        <MdDelete className="text-[13px]" /> Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <ViewModal addr={viewAddr} onClose={() => setViewAddr(null)} />
+      <ConfirmModal
+        open={!!deleteId}
+        title="Delete Address"
+        message="Are you sure you want to delete this address? This action cannot be undone."
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+        loading={deleting}
+      />
+    </section>
+  );
 };
 
 export default MyAddress;
