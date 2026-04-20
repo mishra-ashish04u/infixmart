@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MdSearch, MdExpandMore, MdExpandLess } from "react-icons/md";
+import { MdSearch, MdExpandMore, MdExpandLess, MdPeople } from "react-icons/md";
 import adminAxios from "../utils/adminAxios";
-import TableRowSkeleton from "../../components/skeletons/TableRowSkeleton";
 import EmptyState from "../../components/EmptyState";
 
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
@@ -15,24 +14,35 @@ function initials(name = "") {
   return name.slice(0, 2).toUpperCase();
 }
 
-const greyBtn   = { padding: "0.3rem 0.75rem", background: "#F5F5F5", color: "#555",    border: "1px solid #ddd",     borderRadius: 6, cursor: "pointer", fontSize: "0.8rem", fontWeight: 500 };
-const greenBtn  = { padding: "0.3rem 0.75rem", background: "transparent", color: "#00A651", border: "1px solid #00A651", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem", fontWeight: 600 };
-const redBtn    = { padding: "0.3rem 0.75rem", background: "transparent", color: "#E53935", border: "1px solid #E53935", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem", fontWeight: 600 };
-const dangerBtn = { padding: "0.55rem 1rem",   background: "#E53935",   color: "#fff",   border: "none",               borderRadius: 6, cursor: "pointer", fontSize: "0.875rem", fontWeight: 500 };
+const SEGMENT_CFG = {
+  new:        { bg: "bg-blue-100",   text: "text-blue-700",  label: "New" },
+  returning:  { bg: "bg-green-100",  text: "text-green-700", label: "Returning" },
+  high_value: { bg: "bg-amber-100",  text: "text-amber-700", label: "High Value" },
+  inactive:   { bg: "bg-gray-100",   text: "text-gray-600",  label: "Inactive" },
+};
 
+function SegmentBadge({ segment }) {
+  const cfg = SEGMENT_CFG[segment];
+  if (!cfg) return null;
+  return <span className={`px-2 py-0.5 rounded-full text-[11px] font-[600] ${cfg.bg} ${cfg.text}`}>{cfg.label}</span>;
+}
 
 function Pagination({ page, totalPages, onChange }) {
   if (totalPages <= 1) return null;
   return (
-    <div style={{ display: "flex", gap: "0.35rem", justifyContent: "center", padding: "1rem 0", flexWrap: "wrap" }}>
+    <div className="flex gap-1.5 justify-center py-4 flex-wrap px-4">
       {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-        <button key={p} onClick={() => onChange(p)} style={{ width: 32, height: 32, borderRadius: 6, border: "1px solid", borderColor: p === page ? "#1565C0" : "#E0E0E0", background: p === page ? "#1565C0" : "#fff", color: p === page ? "#fff" : "#333", cursor: "pointer", fontWeight: p === page ? 600 : 400, fontSize: "0.875rem" }}>{p}</button>
+        <button key={p} onClick={() => onChange(p)}
+          className={`w-8 h-8 rounded-lg text-[13px] font-[500] border transition-colors ${
+            p === page ? "bg-[#1565C0] text-white border-[#1565C0]" : "bg-white text-gray-700 border-gray-200 hover:border-[#1565C0]"
+          }`}>
+          {p}
+        </button>
       ))}
     </div>
   );
 }
 
-// ── Expand row: user stats ────────────────────────────────────────────────────
 function UserStatsRow({ user }) {
   const [stats, setStats] = useState(null);
 
@@ -42,48 +52,46 @@ function UserStatsRow({ user }) {
       .catch(() => {});
   }, [user.id]);
 
-  const col = (label, val) => (
-    <div style={{ minWidth: 130 }}>
-      <div style={{ fontSize: "0.73rem", color: "#999", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>{label}</div>
-      <div style={{ fontWeight: 600, color: "#1A237E", fontSize: "0.95rem" }}>{val}</div>
-    </div>
-  );
+  const cols = [
+    { label: "Email",       val: user.email },
+    { label: "Mobile",      val: user.mobile || "—" },
+    { label: "Joined",      val: fmtDate(user.createdAt) },
+    { label: "Last Login",  val: fmtDate(user.last_login_date) },
+    { label: "Total Orders",val: stats ? stats.orderCount : "…" },
+    { label: "Total Spent", val: stats ? inr(stats.totalSpent) : "…" },
+  ];
 
   return (
     <tr>
-      <td colSpan={7} style={{ background: "#F0F4FF", padding: "1rem 1.5rem", borderBottom: "2px solid #E0E0E0" }}>
-        <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
-          {col("Email", user.email)}
-          {col("Mobile", user.mobile || "—")}
-          {col("Joined", fmtDate(user.createdAt))}
-          {col("Last Login", fmtDate(user.last_login_date))}
-          {stats ? (
-            <>
-              {col("Total Orders", stats.orderCount)}
-              {col("Total Spent", inr(stats.totalSpent))}
-            </>
-          ) : (
-            col("Orders/Spent", "Loading…")
-          )}
+      <td colSpan={8} className="bg-blue-50/60 border-b-2 border-gray-200 px-4 sm:px-6 py-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {cols.map(({ label, val }) => (
+            <div key={label}>
+              <p className="text-[10px] font-[700] uppercase tracking-wider text-gray-400 mb-0.5">{label}</p>
+              <p className="text-[13px] font-[600] text-[#1A237E] break-all">{val}</p>
+            </div>
+          ))}
         </div>
       </td>
     </tr>
   );
 }
 
-// ── Suspend confirm dialog ────────────────────────────────────────────────────
 function SuspendDialog({ user, onConfirm, onCancel, loading }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
-      <div style={{ background: "#fff", borderRadius: 10, padding: "2rem", width: 380, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
-        <h3 style={{ color: "#1A237E", marginBottom: "0.75rem", fontSize: "1.05rem" }}>Suspend User</h3>
-        <p style={{ color: "#555", fontSize: "0.9rem", marginBottom: "1.5rem", lineHeight: 1.6 }}>
-          Are you sure you want to suspend <strong>{user.name}</strong>?{" "}
-          They will no longer be able to log in.
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[300] p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        <h3 className="text-[16px] font-[700] text-[#1A237E] mb-2">Suspend User</h3>
+        <p className="text-[13px] text-gray-600 mb-5 leading-relaxed">
+          Are you sure you want to suspend <strong>{user.name}</strong>? They will no longer be able to log in.
         </p>
-        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-          <button onClick={onCancel} style={greyBtn}>Cancel</button>
-          <button onClick={onConfirm} disabled={loading} style={{ ...dangerBtn, opacity: loading ? 0.7 : 1 }}>
+        <div className="flex gap-2 justify-end">
+          <button onClick={onCancel}
+            className="px-4 py-2 bg-gray-100 text-gray-600 text-[13px] font-[600] rounded-xl hover:bg-gray-200 transition-colors">
+            Cancel
+          </button>
+          <button onClick={onConfirm} disabled={loading}
+            className="px-4 py-2 bg-red-600 text-white text-[13px] font-[600] rounded-xl hover:bg-red-700 disabled:opacity-60 transition-colors">
             {loading ? "Suspending…" : "Suspend"}
           </button>
         </div>
@@ -92,7 +100,6 @@ function SuspendDialog({ user, onConfirm, onCancel, loading }) {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -114,14 +121,6 @@ export default function UserManagement() {
     { value: "high_value", label: "High Value" },
     { value: "inactive",   label: "Inactive" },
   ];
-
-  const SEGMENT_COLORS = {
-    new:        { bg: "#E3F2FD", color: "#1565C0" },
-    returning:  { bg: "#E8F5E9", color: "#2E7D32" },
-    high_value: { bg: "#FFF8E1", color: "#F57F17" },
-    inactive:   { bg: "#F5F5F5", color: "#757575" },
-    regular:    { bg: "#F5F5F5", color: "#555" },
-  };
 
   const loadUsers = async (p = 1, q = "", seg = segment) => {
     setLoading(true);
@@ -158,127 +157,103 @@ export default function UserManagement() {
   };
 
   return (
-    <div>
+    <div className="space-y-4">
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
-        <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#1A237E", margin: 0 }}>
-          Users
-          <span style={{ fontWeight: 400, color: "#999", fontSize: "0.875rem", marginLeft: 8 }}>({totalUsers} total)</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h2 className="text-[16px] font-[700] text-[#1A237E]">
+          Users <span className="font-[400] text-gray-400 text-[13px]">({totalUsers} total)</span>
         </h2>
-        <div style={{ position: "relative" }}>
-          <MdSearch style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#999", fontSize: "1.1rem" }} />
-          <input
-            value={searchInput}
-            onChange={handleSearchChange}
-            placeholder="Search by name or email…"
-            style={{ padding: "0.55rem 0.875rem 0.55rem 2rem", border: "1px solid #ddd", borderRadius: 6, fontSize: "0.875rem", outline: "none", width: 240 }}
-          />
+        <div className="relative w-full sm:w-auto">
+          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]" />
+          <input value={searchInput} onChange={handleSearchChange} placeholder="Search by name or email…"
+            className="w-full sm:w-60 pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-[13px] outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/10" />
         </div>
       </div>
 
-      {/* Segment filter tabs */}
-      <div style={{ display: "flex", gap: 0, marginBottom: "1.25rem", borderBottom: "1px solid #E0E0E0", overflowX: "auto" }}>
-        {SEGMENTS.map((s) => (
-          <button key={s.value} onClick={() => { setSegment(s.value); setPage(1); }}
-            style={{ padding: "0.6rem 1rem", background: "none", border: "none", cursor: "pointer", fontSize: "0.85rem", fontWeight: segment === s.value ? 700 : 400, color: segment === s.value ? "#1565C0" : "#555", borderBottom: segment === s.value ? "2px solid #1565C0" : "2px solid transparent", whiteSpace: "nowrap" }}>
-            {s.label}
-          </button>
-        ))}
-      </div>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Segment filter */}
+        <div className="flex gap-0 border-b border-gray-100 overflow-x-auto px-1 pt-1">
+          {SEGMENTS.map((s) => (
+            <button key={s.value} onClick={() => { setSegment(s.value); setPage(1); }}
+              className={`px-3 py-2.5 text-[12px] font-[600] whitespace-nowrap transition-colors border-b-2 -mb-px ${
+                segment === s.value
+                  ? "border-[#1565C0] text-[#1565C0]"
+                  : "border-transparent text-gray-500 hover:text-[#1565C0]"
+              }`}>
+              {s.label}
+            </button>
+          ))}
+        </div>
 
-      {/* Table */}
-      <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #E0E0E0", overflow: "hidden" }}>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+        {/* Desktop table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-[13px]">
             <thead>
-              <tr style={{ background: "#F9FAFB" }}>
-                {["Avatar", "Name", "Email", "Segment", "Role", "Joined", "Status", "Action"].map((h) => (
-                  <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#555", borderBottom: "1px solid #E0E0E0", whiteSpace: "nowrap" }}>{h}</th>
+              <tr className="bg-[#F8FAFF]">
+                {["", "Name", "Email", "Segment", "Role", "Joined", "Status", "Action"].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left text-[11px] font-[700] uppercase tracking-wider text-gray-400 whitespace-nowrap border-b border-gray-100">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading
-                ? Array.from({ length: 8 }).map((_, i) => <TableRowSkeleton key={i} cols={7} widths={[30, 130, 160, 60, 80, 70, 80]} />)
+                ? Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={i} className="border-b border-gray-50">
+                      {Array.from({ length: 8 }).map((__, j) => (
+                        <td key={j} className="px-4 py-3">
+                          <div className="h-4 bg-gray-200 rounded animate-pulse" style={{ width: [32, 120, 160, 70, 65, 75, 60, 80][j] }} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
                 : users.length === 0
-                ? <tr><td colSpan={7}><EmptyState title="No users found" subtitle="Try adjusting your search query." /></td></tr>
+                ? <tr><td colSpan={8}><EmptyState icon={<MdPeople style={{ fontSize: 64 }} />} title="No users found" subtitle="Try adjusting your search query." /></td></tr>
                 : users.flatMap((user, i) => {
                     const isExpanded = expanded === user.id;
                     const isActive = user.status === "active";
                     const isBusy = toggling === user.id;
 
                     const row = (
-                      <tr
-                        key={`row-${user.id}`}
-                        style={{ background: i % 2 === 0 ? "#fff" : "#F9FAFB", borderBottom: isExpanded ? "none" : "1px solid #F0F0F0", cursor: "pointer" }}
-                        onClick={() => setExpanded(isExpanded ? null : user.id)}
-                      >
+                      <tr key={`row-${user.id}`}
+                        className={`border-b border-gray-50 hover:bg-[#F8FAFF] transition-colors cursor-pointer ${i % 2 !== 0 ? "bg-[#FAFAFA]" : ""} ${isExpanded ? "bg-blue-50/30" : ""}`}
+                        onClick={() => setExpanded(isExpanded ? null : user.id)}>
                         {/* Avatar */}
-                        <td style={{ padding: "0.65rem 1rem" }}>
-                          <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#1A237E", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.78rem", fontWeight: 700, flexShrink: 0 }}>
+                        <td className="px-4 py-3">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#1565C0] to-[#1A237E] text-white flex items-center justify-center text-[12px] font-[700]">
                             {initials(user.name)}
                           </div>
                         </td>
-
                         {/* Name */}
-                        <td style={{ padding: "0.65rem 1rem", fontWeight: 500, color: "#222" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                        <td className="px-4 py-3 font-[500] text-gray-800">
+                          <div className="flex items-center gap-1.5">
                             {user.name}
-                            {isExpanded ? <MdExpandLess style={{ color: "#999", fontSize: "1rem" }} /> : <MdExpandMore style={{ color: "#ccc", fontSize: "1rem" }} />}
+                            {isExpanded ? <MdExpandLess className="text-gray-400 text-[16px]" /> : <MdExpandMore className="text-gray-300 text-[16px]" />}
                           </div>
                         </td>
-
-                        {/* Email */}
-                        <td style={{ padding: "0.65rem 1rem", color: "#555" }}>{user.email}</td>
-
-                        {/* Segment */}
-                        <td style={{ padding: "0.65rem 1rem" }}>
-                          {user.segment && user.segment !== "regular" && (() => {
-                            const sc = SEGMENT_COLORS[user.segment] || SEGMENT_COLORS.regular;
-                            const label = { new: "New", returning: "Returning", high_value: "High Value", inactive: "Inactive" }[user.segment] || user.segment;
-                            return (
-                              <span style={{ padding: "0.18rem 0.6rem", borderRadius: 999, fontSize: "0.72rem", fontWeight: 600, background: sc.bg, color: sc.color }}>
-                                {label}
-                              </span>
-                            );
-                          })()}
-                        </td>
-
-                        {/* Role */}
-                        <td style={{ padding: "0.65rem 1rem" }}>
-                          <span style={{ padding: "0.18rem 0.6rem", borderRadius: 999, fontSize: "0.73rem", fontWeight: 600, background: user.role === "admin" ? "#E3F2FD" : "#F5F5F5", color: user.role === "admin" ? "#1565C0" : "#666" }}>
+                        <td className="px-4 py-3 text-gray-500 max-w-[180px] truncate">{user.email}</td>
+                        <td className="px-4 py-3"><SegmentBadge segment={user.segment} /></td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-[600] ${user.role === "admin" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
                             {user.role === "admin" ? "Admin" : "Customer"}
                           </span>
                         </td>
-
-                        {/* Joined */}
-                        <td style={{ padding: "0.65rem 1rem", color: "#666", whiteSpace: "nowrap" }}>{fmtDate(user.createdAt)}</td>
-
-                        {/* Status */}
-                        <td style={{ padding: "0.65rem 1rem" }}>
-                          <span style={{ padding: "0.18rem 0.6rem", borderRadius: 999, fontSize: "0.73rem", fontWeight: 600, background: isActive ? "#E8F5E9" : "#FFEBEE", color: isActive ? "#00A651" : "#E53935" }}>
+                        <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{fmtDate(user.createdAt)}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-[600] ${isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                             {isActive ? "Active" : "Suspended"}
                           </span>
                         </td>
-
-                        {/* Action */}
-                        <td style={{ padding: "0.65rem 1rem" }} onClick={(e) => e.stopPropagation()}>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           {user.role === "admin" ? (
-                            <span style={{ color: "#bbb", fontSize: "0.78rem" }}>—</span>
+                            <span className="text-gray-300 text-[12px]">—</span>
                           ) : isActive ? (
-                            <button
-                              onClick={() => setSuspendTarget(user)}
-                              disabled={isBusy}
-                              style={{ ...redBtn, opacity: isBusy ? 0.6 : 1 }}
-                            >
+                            <button onClick={() => setSuspendTarget(user)} disabled={isBusy}
+                              className="px-3 py-1 text-[12px] font-[600] text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50">
                               Suspend
                             </button>
                           ) : (
-                            <button
-                              onClick={() => toggleStatus(user, true)}
-                              disabled={isBusy}
-                              style={{ ...greenBtn, opacity: isBusy ? 0.6 : 1 }}
-                            >
+                            <button onClick={() => toggleStatus(user, true)} disabled={isBusy}
+                              className="px-3 py-1 text-[12px] font-[600] text-green-600 border border-green-200 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50">
                               {isBusy ? "…" : "Activate"}
                             </button>
                           )}
@@ -286,18 +261,90 @@ export default function UserManagement() {
                       </tr>
                     );
 
-                    if (isExpanded) {
-                      return [row, <UserStatsRow key={`stats-${user.id}`} user={user} />];
-                    }
+                    if (isExpanded) return [row, <UserStatsRow key={`stats-${user.id}`} user={user} />];
                     return [row];
                   })}
             </tbody>
           </table>
         </div>
+
+        {/* Mobile card list */}
+        <div className="md:hidden divide-y divide-gray-50">
+          {loading
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 w-32 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 w-44 bg-gray-100 rounded animate-pulse" />
+                  </div>
+                </div>
+              ))
+            : users.length === 0
+            ? <div className="py-12 text-center text-gray-400 text-[13px]">No users found.</div>
+            : users.map((user) => {
+                const isExpanded = expanded === user.id;
+                const isActive = user.status === "active";
+                const isBusy = toggling === user.id;
+
+                return (
+                  <div key={user.id}>
+                    <div className="p-4" onClick={() => setExpanded(isExpanded ? null : user.id)}>
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1565C0] to-[#1A237E] text-white flex items-center justify-center text-[13px] font-[700] flex-shrink-0">
+                          {initials(user.name)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-0.5">
+                            <span className="text-[14px] font-[600] text-gray-800 truncate">{user.name}</span>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-[700] ${isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                {isActive ? "Active" : "Suspended"}
+                              </span>
+                              {isExpanded ? <MdExpandLess className="text-gray-400" /> : <MdExpandMore className="text-gray-300" />}
+                            </div>
+                          </div>
+                          <p className="text-[12px] text-gray-400 truncate mb-1">{user.email}</p>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-[600] ${user.role === "admin" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
+                              {user.role === "admin" ? "Admin" : "Customer"}
+                            </span>
+                            <SegmentBadge segment={user.segment} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="px-4 pb-4 space-y-3">
+                        {/* Stats */}
+                        <MobileUserStats user={user} />
+                        {/* Action */}
+                        {user.role !== "admin" && (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            {isActive ? (
+                              <button onClick={() => setSuspendTarget(user)} disabled={isBusy}
+                                className="w-full py-2.5 text-[13px] font-[600] text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50">
+                                Suspend User
+                              </button>
+                            ) : (
+                              <button onClick={() => toggleStatus(user, true)} disabled={isBusy}
+                                className="w-full py-2.5 text-[13px] font-[600] text-green-600 border border-green-200 rounded-xl hover:bg-green-50 transition-colors disabled:opacity-50">
+                                {isBusy ? "Activating…" : "Activate User"}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+        </div>
+
         <Pagination page={page} totalPages={totalPages} onChange={(p) => loadUsers(p, search, segment)} />
       </div>
 
-      {/* Suspend confirm */}
       {suspendTarget && (
         <SuspendDialog
           user={suspendTarget}
@@ -306,6 +353,33 @@ export default function UserManagement() {
           loading={toggling === suspendTarget.id}
         />
       )}
+    </div>
+  );
+}
+
+function MobileUserStats({ user }) {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    adminAxios.get(`/api/admin/users/${user.id}/stats`)
+      .then((r) => setStats(r.data))
+      .catch(() => {});
+  }, [user.id]);
+
+  return (
+    <div className="bg-blue-50/60 rounded-xl border border-blue-100 p-3 grid grid-cols-2 gap-2">
+      {[
+        { label: "Mobile",       val: user.mobile || "—" },
+        { label: "Joined",       val: fmtDate(user.createdAt) },
+        { label: "Last Login",   val: fmtDate(user.last_login_date) },
+        { label: "Total Orders", val: stats ? stats.orderCount : "…" },
+        { label: "Total Spent",  val: stats ? inr(stats.totalSpent) : "…" },
+      ].map(({ label, val }) => (
+        <div key={label}>
+          <p className="text-[10px] font-[700] uppercase tracking-wider text-gray-400 mb-0.5">{label}</p>
+          <p className="text-[12px] font-[600] text-[#1A237E]">{val}</p>
+        </div>
+      ))}
     </div>
   );
 }
